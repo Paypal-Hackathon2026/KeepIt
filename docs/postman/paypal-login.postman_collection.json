@@ -1,0 +1,140 @@
+{
+  "info": {
+    "_postman_id": "a8aaeb6a-a392-4a82-b9ae-914c95f253e5",
+    "name": "PayPal Login Tests",
+    "description": "This collection contains requests to test the PayPal login flow. It includes a request to exchange a one-time authorization code for an access token, and a request to retrieve user information using that access token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Log in with PayPal",
+      "item": [
+        {
+          "name": "Getting access token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login token returned\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (body.access_token) { pm.environment.set(\"login_access_token\", body.access_token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{paypal_client_id}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{paypal_client_secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code",
+                  "type": "text"
+                },
+                {
+                  "key": "code",
+                  "value": "{{login_code}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://api-m.sandbox.paypal.com/v1/oauth2/token",
+              "protocol": "https",
+              "host": [
+                "api-m",
+                "sandbox",
+                "paypal",
+                "com"
+              ],
+              "path": [
+                "v1",
+                "oauth2",
+                "token"
+              ]
+            },
+            "description": "Exchange the one-time authorization code (login_code) for an access token. The code is single-use and expires quickly, so paste it into login_code and send immediately."
+          },
+          "response": []
+        },
+        {
+          "name": "getting user info",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{login_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://api-m.sandbox.paypal.com/v1/identity/oauth2/userinfo?schema=paypalv1.1",
+              "protocol": "https",
+              "host": [
+                "api-m",
+                "sandbox",
+                "paypal",
+                "com"
+              ],
+              "path": [
+                "v1",
+                "identity",
+                "oauth2",
+                "userinfo"
+              ],
+              "query": [
+                {
+                  "key": "schema",
+                  "value": "paypalv1.1"
+                }
+              ]
+            },
+            "description": "Returns the logged-in PayPal user (identifier, name, email). Run after the token request."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Userinfo returned\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const u = pm.response.json();",
+                  "console.log(\"Fields returned:\", Object.keys(u).join(\", \"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
