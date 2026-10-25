@@ -1,5 +1,5 @@
 ## Paypal sandbox order test in PLN on the Postman web app
-## Before continuing ensure that in the Postman you have the 0Auth token set up and also set up your environmental varaiables
+## Before continuing ensure that in the Postman you have the 0Auth token set up and also set up your environmental variables
 ![alt text](image.png)
 Instruction to recreate test:
 
@@ -32,10 +32,10 @@ After confirming the order, we can go to the next step.
 POST https://api-m.sandbox.paypal.com/v2/checkout/orders/{{order_id}}/capture
 In body section we choose raw and leave it blank :{}
 If the response was 201 Created we go to the next step. In the response body we can see the how much is the Paypal fee for this transaction.
-### Confirming that the balance of the businnes account went up
+### Confirming that the balance of the business account went up
 Log in to the sandbox Paypal as our Business account, see the recent transaction.
 If you can see it, go to the next step.
-### Transfer from Businnes to user
+### Transfer from Business to user
 POST https://api-m.sandbox.paypal.com/v1/payments/payouts
 In body section choose raw and paste:
 {
