@@ -1,0 +1,331 @@
+{
+  "info": {
+    "_postman_id": "f97de833-ba46-42ba-a880-b23f3b1e3e7b",
+    "name": "PayPal Sandbox Tests",
+    "description": "PayPal sandbox tests for the Commitment Pact project: create an order in PLN, capture it, send a payout and check its status.\n\nEnvironment variables to set (values are never stored in this file): paypal_client_id, paypal_client_secret, email_for_test (sandbox personal account email that receives the payout). order_id and payout_batch_id are filled automatically by the scripts.\n\nRun in order: 1 -> approve the payer-action link in an incognito window as a sandbox personal account -> 2 -> 3 -> 4. Sandbox only, no real money.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create order (PLN)",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "clientId",
+              "value": "{{paypal_client_id}}",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://api-m.sandbox.paypal.com/v1/oauth2/token",
+              "type": "string"
+            },
+            {
+              "key": "tokenName",
+              "value": "Paypal",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            },
+            {
+              "key": "clientSecret",
+              "value": "{{paypal_client_secret}}",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"intent\": \"CAPTURE\",\n  \"purchase_units\": [\n    {\n      \"custom_id\": \"challenge-1:alice\",\n      \"amount\": { \"currency_code\": \"PLN\", \"value\": \"20.00\" }\n    }\n  ],\n  \"payment_source\": {\n    \"paypal\": {\n      \"experience_context\": {\n        \"return_url\": \"https://example.com/return\",\n        \"cancel_url\": \"https://example.com/cancel\",\n        \"user_action\": \"PAY_NOW\"\n      }\n    }\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+          "protocol": "https",
+          "host": [
+            "api-m",
+            "sandbox",
+            "paypal",
+            "com"
+          ],
+          "path": [
+            "v2",
+            "checkout",
+            "orders"
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Order created\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              "const body = pm.response.json();",
+              "if (body.id) { pm.environment.set(\"order_id\", body.id); }",
+              "const link = (body.links || []).find(l => l.rel === \"payer-action\" || l.rel === \"approve\");",
+              "if (link) { console.log(\"Open in an incognito window and approve as a sandbox personal account: \" + link.href); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Capture order",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "clientId",
+              "value": "{{paypal_client_id}}",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://api-m.sandbox.paypal.com/v1/oauth2/token",
+              "type": "string"
+            },
+            {
+              "key": "tokenName",
+              "value": "Paypal",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            },
+            {
+              "key": "clientSecret",
+              "value": "{{paypal_client_secret}}",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://api-m.sandbox.paypal.com/v2/checkout/orders/{{order_id}}/capture",
+          "protocol": "https",
+          "host": [
+            "api-m",
+            "sandbox",
+            "paypal",
+            "com"
+          ],
+          "path": [
+            "v2",
+            "checkout",
+            "orders",
+            "{{order_id}}",
+            "capture"
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Capture completed\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "    pm.expect(pm.response.json().status).to.eql(\"COMPLETED\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Create payout (PLN)",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "clientId",
+              "value": "{{paypal_client_id}}",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://api-m.sandbox.paypal.com/v1/oauth2/token",
+              "type": "string"
+            },
+            {
+              "key": "tokenName",
+              "value": "Paypal",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            },
+            {
+              "key": "clientSecret",
+              "value": "{{paypal_client_secret}}",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sender_batch_header\": {\n    \"sender_batch_id\": \"payout-{{$timestamp}}\",\n    \"email_subject\": \"Challenge reward\"\n  },\n  \"items\": [\n    {\n      \"recipient_type\": \"EMAIL\",\n      \"amount\": {\n        \"value\": \"10.00\",\n        \"currency\": \"PLN\"\n      },\n      \"receiver\": \"{{email_for_test}}\",\n      \"note\": \"Challenge completed\",\n      \"sender_item_id\": \"item-{{$timestamp}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://api-m.sandbox.paypal.com/v1/payments/payouts",
+          "protocol": "https",
+          "host": [
+            "api-m",
+            "sandbox",
+            "paypal",
+            "com"
+          ],
+          "path": [
+            "v1",
+            "payments",
+            "payouts"
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Payout batch accepted\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              "const batch = pm.response.json().batch_header;",
+              "if (batch && batch.payout_batch_id) { pm.environment.set(\"payout_batch_id\", batch.payout_batch_id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Get payout status",
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "clientId",
+              "value": "{{paypal_client_id}}",
+              "type": "string"
+            },
+            {
+              "key": "accessTokenUrl",
+              "value": "https://api-m.sandbox.paypal.com/v1/oauth2/token",
+              "type": "string"
+            },
+            {
+              "key": "tokenName",
+              "value": "Paypal",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            },
+            {
+              "key": "clientSecret",
+              "value": "{{paypal_client_secret}}",
+              "type": "string"
+            },
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://api-m.sandbox.paypal.com/v1/payments/payouts/{{payout_batch_id}}",
+          "protocol": "https",
+          "host": [
+            "api-m",
+            "sandbox",
+            "paypal",
+            "com"
+          ],
+          "path": [
+            "v1",
+            "payments",
+            "payouts",
+            "{{payout_batch_id}}"
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status returned\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
