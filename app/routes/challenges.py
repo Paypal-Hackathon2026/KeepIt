@@ -29,4 +29,4 @@ def create(
 )
 def join(challenge_id: UUID, user: dict = Depends(current_user)):
     """Join a challenge."""
-    return join_challenge(challenge_id, user["id"])
+    return join_challenge(str(challenge_id), str(user["id"]))
