@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from app.db import supabase
 from app.services.paypal import capture_order, create_order
 from datetime import datetime, timezone
+import httpx
 
 
 def join_challenge(challenge_id: str, user_id: str) -> dict:
@@ -64,10 +65,23 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
             raise HTTPException(
                 status_code=409,
                 detail=f"A payment is already in progress",)
-    order = create_order(
+
+    try:
+        order = create_order(
             challenge_id=challenge_id,
             user_id=user_id,
-            entry_fee_minor=challenge_response.data["entry_fee_minor"],)
+            entry_fee_minor=challenge_response.data["entry_fee_minor"],
+        )
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="PayPal order creation failed",
+        ) from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="PayPal is unavailable",
+        ) from exc
     approve_url = order["approve_url"]
     paypal_order_id = order["paypal_order_id"]
     payment_response=(
