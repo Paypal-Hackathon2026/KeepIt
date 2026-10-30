@@ -27,7 +27,7 @@ existing = (
 
 if existing.data:
     profile = existing.data[0]
-    print(f"♻️  Using existing test profile: {profile['id']}")
+    print(f"Using existing test profile: {profile['id']}")
 else:
     result = (
         supabase.table("profiles")
@@ -39,7 +39,7 @@ else:
         .execute()
     )
     profile = result.data[0]
-    print(f"✅ Created test profile: {profile['id']}")
+    print(f"Created test profile: {profile['id']}")
 
 PROFILE_ID = profile["id"]
 
@@ -58,7 +58,7 @@ def _fake_login(request: Request):
 
 # Call it to set the session cookie
 resp = client.get("/_test/fake-login")
-print(f"🔑 Fake login: {resp.json()}")
+print(f"Fake login: {resp.json()}")
 
 # ── Step 3: test POST /api/challenges ─────────────────────────
 print("\n" + "=" * 60)
@@ -66,8 +66,8 @@ print("TEST 1: Valid challenge creation")
 print("=" * 60)
 
 resp = client.post("/api/challenges", json={
-    "title": "Biegnij 5km",
-    "criteria": "Przebiegaj 5km i zrob zdjecie z proof_code",
+    "title": "Run 5km",
+    "criteria": "Run 5km and take photo with proof_code",
     "entry_fee_pln": 10.50,
     "join_deadline": "2026-12-01T12:00:00Z",
     "proof_deadline": "2026-12-15T23:59:00Z",
@@ -76,7 +76,7 @@ resp = client.post("/api/challenges", json={
 print(f"Status: {resp.status_code}")
 if resp.status_code == 201:
     data = resp.json()
-    print(f"✅ Challenge created!")
+    print(f" Challenge created")
     print(f"   id:              {data['id']}")
     print(f"   title:           {data['title']}")
     print(f"   entry_fee_minor: {data['entry_fee_minor']} (should be 1050)")
@@ -93,11 +93,11 @@ if resp.status_code == 201:
         .execute()
     )
     if part.data:
-        print(f"✅ Creator auto-registered as participant")
+        print(f"Creator auto-registered as participant")
     else:
-        print(f"❌ Participant NOT found!")
+        print(f"Participant NOT found!")
 else:
-    print(f"❌ Error: {resp.json()}")
+    print(f"Error: {resp.json()}")
 
 # ── Step 4: test validation errors ────────────────────────────
 print("\n" + "=" * 60)
@@ -111,7 +111,7 @@ resp = client.post("/api/challenges", json={
     "join_deadline": "2020-01-01T00:00:00Z",
     "proof_deadline": "2026-12-01T00:00:00Z",
 })
-print(f"Status: {resp.status_code} {'✅' if resp.status_code == 422 else '❌'}")
+print(f"Status: {resp.status_code} {'ok' if resp.status_code == 422 else 'err'}")
 
 print("\n" + "=" * 60)
 print("TEST 3: proof_deadline before join_deadline → should be 422")
@@ -124,7 +124,7 @@ resp = client.post("/api/challenges", json={
     "join_deadline": "2026-12-15T00:00:00Z",
     "proof_deadline": "2026-12-01T00:00:00Z",
 })
-print(f"Status: {resp.status_code} {'✅' if resp.status_code == 422 else '❌'}")
+print(f"Status: {resp.status_code} {'ok' if resp.status_code == 422 else 'err'}")
 
 # ── Step 5: test without session → 303 ───────────────────────
 print("\n" + "=" * 60)
@@ -139,7 +139,7 @@ resp = no_auth_client.post("/api/challenges", json={
     "join_deadline": "2026-12-01T00:00:00Z",
     "proof_deadline": "2026-12-15T00:00:00Z",
 }, follow_redirects=False)
-print(f"Status: {resp.status_code} {'✅' if resp.status_code == 303 else '❌'}")
+print(f"Status: {resp.status_code} {'ok' if resp.status_code == 303 else 'err'}")
 
 # ── Cleanup: remove the test route ────────────────────────────
 app.routes[:] = [r for r in app.routes if getattr(r, 'path', '') != '/_test/fake-login']
