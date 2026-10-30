@@ -1,8 +1,11 @@
 import secrets
 import string
+from decimal import Decimal
+
+from fastapi import HTTPException
 
 from app.models.challenge import ChallengeCreate
-from app.supabase_client import supabase
+from app.db import supabase
 
 PROOF_CODE_LENGTH = 8
 PROOF_CODE_ALPHABET = string.ascii_uppercase + string.digits
@@ -15,42 +18,41 @@ def _generate_proof_code() -> str:
     )
 
 
-def _pln_to_minor(pln) -> int:
-    """Convert PLN (Decimal/float) to the smallest unit (grosz)."""
-    return int(round(float(pln) * 100))
+def _pln_to_minor(pln: Decimal) -> int:
+    """Convert PLN (Decimal) to the smallest unit (grosz).
+
+    Uses Decimal arithmetic to avoid floating-point rounding errors.
+    """
+    return int(pln * Decimal("100"))
 
 
 def create_challenge(payload: ChallengeCreate, creator_id: str) -> dict:
     """
-    Insert a new challenge and register the creator as the first participant.
+    Create a new challenge and register the creator as the first participant.
+
+    Both inserts run inside a single Postgres function (RPC) so they are
+    atomic — if the participant insert fails, the challenge insert is
+    rolled back automatically.
 
     Returns the created challenge row.
     """
-    challenge_data = {
-        "creator_id": creator_id,
-        "title": payload.title,
-        "criteria": payload.criteria,
-        "entry_fee_minor": _pln_to_minor(payload.entry_fee_pln),
-        "proof_code": _generate_proof_code(),
-        "join_deadline": payload.join_deadline.isoformat(),
-        "proof_deadline": payload.proof_deadline.isoformat(),
-    }
-
-    challenge = (
-        supabase.table("challenges")
-        .insert(challenge_data)
-        .execute()
-    )
-
-    challenge_row = challenge.data[0]
-
-    # Auto-register the creator as a participant
-    supabase.table("participants").insert(
+    result = supabase.rpc(
+        "create_challenge_with_participant",
         {
-            "challenge_id": challenge_row["id"],
-            "user_id": creator_id,
-        }
+            "p_creator_id": creator_id,
+            "p_title": payload.title,
+            "p_criteria": payload.criteria,
+            "p_entry_fee_minor": _pln_to_minor(payload.entry_fee_pln),
+            "p_proof_code": _generate_proof_code(),
+            "p_join_deadline": payload.join_deadline.isoformat(),
+            "p_proof_deadline": payload.proof_deadline.isoformat(),
+        },
     ).execute()
 
-    return challenge_row
+    if not result.data:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create challenge in database",
+        )
 
+    return result.data
