@@ -1,3 +1,4 @@
+import logging
 from fastapi import HTTPException
 from app.db import supabase
 from app.services.paypal import capture_order, create_order
@@ -5,13 +6,22 @@ from datetime import datetime, timezone
 import httpx
 
 
+logger = logging.getLogger(__name__)
+
+
 def join_challenge(challenge_id: str, user_id: str) -> dict:
+    logger.info("join started: challenge_id=%s user_id=%s", challenge_id, user_id)
     challenge_response = (
     supabase.table("challenges")
     .select("id, entry_fee_minor, status, join_deadline")
     .eq("id", challenge_id)
     .single()
     .execute()
+    )
+    logger.info(
+        "challenge lookup completed: challenge_id=%s found=%s",
+        challenge_id,
+        bool(challenge_response.data),
     )
     if not challenge_response.data:
         raise HTTPException(status_code=404, detail="Challenge not found")
@@ -31,6 +41,12 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
     .maybe_single()
     .execute()
     )
+    logger.info(
+        "participant lookup completed: challenge_id=%s user_id=%s found=%s",
+        challenge_id,
+        user_id,
+        bool(participant_response.data),
+    )
     if participant_response.data:
         participant = participant_response.data
     else:
@@ -40,6 +56,11 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
             .execute()
         )
         participant = insert_response.data[0]
+        logger.info(
+            "participant created: challenge_id=%s user_id=%s",
+            challenge_id,
+            user_id,
+        )
     if participant["paid"]:
         raise HTTPException(
             status_code=409,
@@ -55,6 +76,12 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
     .in_("status", ["created", "captured"])
     .execute()
     )
+    logger.info(
+        "payment lookup completed: challenge_id=%s user_id=%s active_count=%s",
+        challenge_id,
+        user_id,
+        len(payments_response.data or []),
+    )
     for payment in payments_response.data or []:
         if payment["status"]=="captured":
             raise HTTPException(
@@ -67,38 +94,80 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
                 detail=f"A payment is already in progress",)
 
     try:
+        logger.info(
+            "creating PayPal order: challenge_id=%s user_id=%s amount_minor=%s",
+            challenge_id,
+            user_id,
+            challenge_response.data["entry_fee_minor"],
+        )
         order = create_order(
             challenge_id=challenge_id,
             user_id=user_id,
             entry_fee_minor=challenge_response.data["entry_fee_minor"],
         )
+        logger.info(
+            "PayPal order created: challenge_id=%s paypal_order_id=%s",
+            challenge_id,
+            order.get("paypal_order_id"),
+        )
     except httpx.HTTPStatusError as exc:
+        logger.exception(
+            "PayPal order returned HTTP error: challenge_id=%s status=%s",
+            challenge_id,
+            exc.response.status_code,
+        )
         raise HTTPException(
             status_code=502,
             detail="PayPal order creation failed",
         ) from exc
     except httpx.RequestError as exc:
+        logger.exception(
+            "PayPal request failed: challenge_id=%s error_type=%s",
+            challenge_id,
+            type(exc).__name__,
+        )
         raise HTTPException(
             status_code=502,
             detail="PayPal is unavailable",
         ) from exc
     except RuntimeError as exc:
+        logger.exception(
+            "PayPal returned invalid data: challenge_id=%s error=%s",
+            challenge_id,
+            str(exc),
+        )
         raise HTTPException(
             status_code=502,
             detail="PayPal returned an invalid response",
         ) from exc
     approve_url = order["approve_url"]
     paypal_order_id = order["paypal_order_id"]
-    payment_response=(
-        supabase.table("payments")
-        .insert({
-            "challenge_id": challenge_id,
-            "user_id": user_id,
-            "amount_minor": challenge_response.data["entry_fee_minor"],
-            "paypal_order_id": paypal_order_id,
-            "status": "created",
-        })
-        .execute()
+    try:
+        payment_response = (
+            supabase.table("payments")
+            .insert({
+                "challenge_id": challenge_id,
+                "user_id": user_id,
+                "amount_minor": challenge_response.data["entry_fee_minor"],
+                "paypal_order_id": paypal_order_id,
+                "status": "created",
+            })
+            .execute()
+        )
+    except Exception:
+        logger.exception(
+            "payment insert failed: challenge_id=%s user_id=%s paypal_order_id=%s",
+            challenge_id,
+            user_id,
+            paypal_order_id,
+        )
+        raise
+
+    logger.info(
+        "payment insert completed: challenge_id=%s user_id=%s payment_found=%s",
+        challenge_id,
+        user_id,
+        bool(payment_response.data),
     )
     payment=payment_response.data[0]
     return {
