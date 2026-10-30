@@ -82,6 +82,11 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
             status_code=502,
             detail="PayPal is unavailable",
         ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="PayPal returned an invalid response",
+        ) from exc
     approve_url = order["approve_url"]
     paypal_order_id = order["paypal_order_id"]
     payment_response=(
