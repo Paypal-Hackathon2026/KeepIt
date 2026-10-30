@@ -44,3 +44,25 @@ class ChallengeOut(BaseModel):
     join_deadline: datetime
     proof_deadline: datetime
 
+
+class ParticipantOut(BaseModel):
+    user_id: UUID
+    display_name: str | None = None
+    paid: bool
+    outcome: str
+    joined_at: datetime
+
+
+class ChallengeSummaryOut(BaseModel):
+    id: UUID
+    title: str
+    status: str
+    entry_fee_minor: int
+    pool_minor: int
+    join_deadline: datetime
+    proof_deadline: datetime
+
+
+class ChallengeDetailOut(ChallengeOut):
+    pool_minor: int
+    participants: list[ParticipantOut]
