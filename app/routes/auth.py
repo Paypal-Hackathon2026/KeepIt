@@ -55,4 +55,4 @@ def me(user: dict = Depends(current_user)):
 @router.post("/logout")
 def logout(request: Request):
     request.session.clear()
-    return {"logged_out": True}
+    return RedirectResponse("/login", status_code=303)
