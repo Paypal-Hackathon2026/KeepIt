@@ -41,14 +41,17 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
     .maybe_single()
     .execute()
     )
+    participant_data = (
+        participant_response.data if participant_response is not None else None
+    )
     logger.info(
         "participant lookup completed: challenge_id=%s user_id=%s found=%s",
         challenge_id,
         user_id,
-        bool(participant_response.data),
+        bool(participant_data),
     )
-    if participant_response.data:
-        participant = participant_response.data
+    if participant_data:
+        participant = participant_data
     else:
         insert_response = (
         supabase.table("participants")
