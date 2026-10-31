@@ -197,7 +197,7 @@ def complete_payment(paypal_order_id: str, user_id: str) -> dict:
         supabase.table("payments")
         .select("id, challenge_id, user_id, amount_minor, paypal_order_id, status")
         .eq("paypal_order_id", paypal_order_id)
-        .single()
+        .maybe_single()
         .execute()
     )
     if not payment_response.data:
@@ -254,7 +254,7 @@ def cancel_payment(paypal_order_id: str, user_id: str) -> dict:
         supabase.table("payments")
         .select("id, challenge_id, user_id, status")
         .eq("paypal_order_id", paypal_order_id)
-        .single()
+        .maybe_single()
         .execute()
     )
     if not payment_response.data:
