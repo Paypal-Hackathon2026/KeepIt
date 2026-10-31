@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block body %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="/" class="topbar-logo">KeepIt</a>
+
+    <div class="topbar-actions">
+      <a href="/challenges/new" class="button button-primary topbar-new">+ New challenge</a>
+
+      <details class="avatar-menu">
+        <summary class="avatar" aria-label="Account menu">
+          {{ user.display_name[0] | upper }}
+        </summary>
+        <div class="avatar-dropdown">
+          <p class="avatar-name">{{ user.display_name }}</p>
+          <form method="post" action="/logout">
+            <button type="submit" class="link-button">Log out</button>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  {% block content %}{% endblock %}
+</main>
+{% endblock %}
