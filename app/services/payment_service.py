@@ -197,12 +197,12 @@ def complete_payment(paypal_order_id: str, user_id: str) -> dict:
         supabase.table("payments")
         .select("id, challenge_id, user_id, amount_minor, paypal_order_id, status")
         .eq("paypal_order_id", paypal_order_id)
-        .maybe_single()
+        .limit(1)
         .execute()
     )
     if not payment_response.data:
         raise HTTPException(status_code=404, detail="Payment not found")
-    payment = payment_response.data
+    payment = payment_response.data[0]
     if payment["user_id"] != user_id:
         raise HTTPException(status_code=404, detail="Payment not found")
     if payment["status"] == "cancelled":
@@ -254,13 +254,13 @@ def cancel_payment(paypal_order_id: str, user_id: str) -> dict:
         supabase.table("payments")
         .select("id, challenge_id, user_id, status")
         .eq("paypal_order_id", paypal_order_id)
-        .maybe_single()
+        .limit(1)
         .execute()
     )
     if not payment_response.data:
         raise HTTPException(status_code=404, detail="Payment not found")
 
-    payment = payment_response.data
+    payment = payment_response.data[0]
     if payment["user_id"] != user_id:
         raise HTTPException(status_code=404, detail="Payment not found")
 
