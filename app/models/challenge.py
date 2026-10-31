@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
+from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+
+from pydantic import BaseModel, Field, field_validator, model_validator, AnyHttpUrl
 
 
 class ChallengeCreate(BaseModel):
@@ -43,4 +45,11 @@ class ChallengeOut(BaseModel):
     status: str
     join_deadline: datetime
     proof_deadline: datetime
+
+class ChallengeJoinOut(BaseModel):
+    payment_id: UUID
+    paypal_order_id: str
+    approve_url: AnyHttpUrl
+    amount_minor: int
+    status: Literal["created"]
 
