@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Log in · KeepIt{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/login.css">
+{% endblock %}
+
+{% block body %}
+<main class="login-page">
+  <div class="login-card">
+    <h1 class="login-title">Keep it,</h1>
+    <p class="login-subtitle">your commitments</p>
+
+    <p class="login-text">
+      Make a pact with friends, put in an Entry Fee and prove you did it.
+    </p>
+
+    {% if error %}
+      <p>{{ error }}</p>
+    {% endif %}
+
+    <a href="/auth/paypal/login" class="login-button">Log in with PayPal</a>
+  </div>
+</main>
+{% endblock %}
