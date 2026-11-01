@@ -171,3 +171,7 @@ body {
   margin: 0 auto;
   padding: 28px 16px 48px;
 }
+
+html, body {
+  scrollbar-color: var(--blue) var(--cream-dark);
+}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}KeepIt · Keep your commitments{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/home.css">
+{% endblock %}
+
+{% block body %}
+<main class="home">
+
+  <section class="home-hero">
+    <h1 class="home-title">Keep it,</h1>
+    <p class="home-subtitle">your commitments</p>
+    <p class="home-lead">
+      Make a pact with friends, put in an Entry Fee and prove you did it.
+      The AI Arbiter checks your photo, PayPal settles the pool.
+    </p>
+    {% if logged_in %}
+    <a href="/challenges" class="home-cta">Go to my challenges</a>
+    {% else %}
+    <a href="/login" class="home-cta">Log in or sign up</a>
+    <p class="home-note">New here? Your account is created automatically the first time you log in.</p>
+    {% endif %}
+  </section>
+
+  <section class="home-steps" aria-labelledby="how-it-works">
+    <h2 id="how-it-works">How it works</h2>
+    <ol class="steps">
+      <li class="step">
+        <h3>Make a pact</h3>
+        <p>Create a challenge, set a deadline and an Entry Fee, and invite your friends.</p>
+      </li>
+      <li class="step">
+        <h3>Prove it</h3>
+        <p>Take a photo with your secret proof code. The AI Arbiter checks it.</p>
+      </li>
+      <li class="step">
+        <h3>Settle up</h3>
+        <p>Those who made it get their fee back plus a share of the fees of those who didn't.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="home-about" aria-labelledby="about-us">
+    <h2 id="about-us">About us</h2>
+    <p> We're a small team of four from Poznań. We built KeepIt because we know how easy it is
+  to promise "I'll do it tomorrow" and then quietly let it slide. We want to help people
+  stick to their goals, and to make keeping commitments more fun by turning them into
+  challenges with friends.</p>
+  </section>
+
+</main>
+{% endblock %}
