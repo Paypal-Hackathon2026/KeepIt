@@ -1,0 +1,438 @@
+.challenges-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.challenges-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.challenges-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(32px, 7vw, 44px);
+  font-weight: 400;
+  color: var(--blue);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 24px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--orange);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-pop);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+}
+
+.btn-primary:hover {
+  background: var(--orange-dark);
+}
+
+.btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--blue);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 2px solid var(--blue);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--blue);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--pink);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.btn-secondary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--pink);
+}
+
+.btn-full {
+  width: 100%;
+  font-size: 18px;
+  min-height: 52px;
+}
+
+@media (min-width: 768px) {
+  .mobile-new-btn {
+    display: none;
+  }
+}
+
+/* Grid & Cards */
+.challenges-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 640px) {
+  .challenges-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .challenges-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.challenge-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 22px 20px;
+  text-decoration: none;
+  color: var(--text);
+  box-shadow: 6px 6px 0 var(--pink);
+  border: 2px solid transparent;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+
+.challenge-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--blue);
+  border-color: var(--blue);
+}
+
+.challenge-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.challenge-fee {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.challenge-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--blue);
+  line-height: 1.2;
+}
+
+.challenge-card-pool {
+  margin-top: auto;
+  background: var(--cream);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pool-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pool-amount {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--orange-dark);
+}
+
+.challenge-card-deadline {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--cream-dark);
+  color: var(--text);
+}
+
+.status-open {
+  background: #e3f2fd;
+  color: var(--blue);
+}
+
+.status-active {
+  background: #fff3cd;
+  color: #b26a00;
+}
+
+.status-settled {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.status-cancelled {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Empty State */
+.empty-state {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 40px 24px;
+  text-align: center;
+  box-shadow: 8px 8px 0 var(--pink);
+  max-width: 32rem;
+  margin: 16px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty-state h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 400;
+  color: var(--blue);
+}
+
+.empty-state p {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+}
+
+/* Challenge Detail Page */
+.detail-container {
+  max-width: 42rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.back-link {
+  color: var(--blue);
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.detail-card,
+.participants-card {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 24px 20px;
+  box-shadow: 8px 8px 0 var(--pink);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (min-width: 640px) {
+  .detail-card,
+  .participants-card {
+    padding: 32px 32px;
+  }
+}
+
+.detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detail-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 6vw, 40px);
+  font-weight: 400;
+  color: var(--blue);
+  line-height: 1.15;
+}
+
+.detail-criteria {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+.pool-banner {
+  background: var(--cream);
+  border: 2px solid var(--cream-dark);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pool-banner-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pool-banner-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: var(--orange-dark);
+  line-height: 1.1;
+}
+
+.pool-banner-fee {
+  font-size: 15px;
+  color: var(--text);
+}
+
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .detail-meta-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.meta-box {
+  background: var(--cream);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.meta-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.proof-code {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  color: var(--blue);
+}
+
+.section-heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--blue);
+}
+
+.participants-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.participant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--cream);
+  border-radius: 12px;
+}
+
+.participant-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.participant-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.participant-name {
+  font-weight: 700;
+}
+
+.badge-paid,
+.badge-unpaid {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge-paid {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.badge-unpaid {
+  background: #ffebee;
+  color: #c62828;
+}

@@ -1,0 +1,103 @@
+{% extends "base_logged_in.html" %}
+
+{% block title %}{{ challenge.title }} · KeepIt{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/challenges.css">
+{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+  <a href="/challenges" class="back-link">← Back to my challenges</a>
+
+  <section class="detail-card">
+    <div class="detail-top">
+      <span class="status-badge status-{{ challenge.status }}">
+        {{ challenge.status | capitalize }}
+      </span>
+      <button type="button" class="btn-secondary" id="copy-invite-btn" onclick="copyInviteLink()">
+        Copy invite link
+      </button>
+    </div>
+
+    <h1 class="detail-title">{{ challenge.title }}</h1>
+    <p class="detail-criteria">{{ challenge.criteria }}</p>
+
+    <div class="pool-banner">
+      <div>
+        <span class="pool-banner-label">Commitment Pool</span>
+        <div class="pool-banner-value">
+          {{ "%.2f"|format((challenge.pool_minor | default(0)) / 100) }} PLN
+        </div>
+      </div>
+      <div class="pool-banner-fee">
+        Entry fee: <strong>{{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN</strong>
+      </div>
+    </div>
+
+    <div class="detail-meta-grid">
+      <div class="meta-box">
+        <span class="meta-label">Secret Proof Code</span>
+        <span class="proof-code">{{ challenge.proof_code }}</span>
+      </div>
+      <div class="meta-box">
+        <span class="meta-label">Join Deadline</span>
+        <span class="meta-value">{{ challenge.join_deadline_fmt }}</span>
+      </div>
+      <div class="meta-box">
+        <span class="meta-label">Proof Deadline</span>
+        <span class="meta-value">{{ challenge.proof_deadline_fmt }}</span>
+      </div>
+    </div>
+
+    {% if not has_paid and challenge.status == 'open' %}
+      <form method="post" action="/challenges/{{ challenge.id }}/pay" class="join-pay-form">
+        <button type="submit" class="btn-primary btn-full">
+          Join &amp; pay ({{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN)
+        </button>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="participants-card">
+    <h2 class="section-heading">
+      Participants ({{ challenge.participants | length }})
+    </h2>
+
+    {% if challenge.participants %}
+      <ul class="participants-list">
+        {% for p in challenge.participants %}
+          <li class="participant-row">
+            <div class="participant-info">
+              <span class="participant-avatar">
+                {{ (p.display_name or "?")[0] | upper }}
+              </span>
+              <span class="participant-name">{{ p.display_name or "Participant" }}</span>
+            </div>
+            <div class="participant-badges">
+              {% if p.paid %}
+                <span class="badge-paid">Paid</span>
+              {% else %}
+                <span class="badge-unpaid">Unpaid</span>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">No participants yet.</p>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+function copyInviteLink() {
+  const btn = document.getElementById("copy-invite-btn");
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    const original = btn.textContent;
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  });
+}
+</script>
+{% endblock %}
