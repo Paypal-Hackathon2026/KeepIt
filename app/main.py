@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import config
-from app.routes import auth, pages, paypal
+from app.routes import auth, pages, paypal, challenge_pages
 from app.routes.challenges import router as challenges_router
 
 app = FastAPI(title="KeepIt")
@@ -15,6 +15,7 @@ app.include_router(auth.router)
 app.include_router(pages.router)
 app.include_router(paypal.router)
 app.include_router(challenges_router)
+app.include_router(challenge_pages.router)
 
 
 @app.get("/health")

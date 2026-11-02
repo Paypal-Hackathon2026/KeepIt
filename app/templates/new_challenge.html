@@ -1,0 +1,55 @@
+{% extends "base_logged_in.html" %}
+
+{% block title %}Create a new Challenge{% endblock %}
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/new_challenge.css">
+{% endblock %}
+
+{% block content %}
+<form class="new-challenge-form" action="/challenges/new" method="POST">
+<div class="form_cell">
+  <label for="title">Title:</label>
+  <input type="text" id="title" name="title"
+  value="{{values.title if values.title is defined else ''}}">
+  {% if errors.title %}
+  <p class="field-error">{{ errors.title }}</p>
+{% endif %}
+</div>
+<div class="form_cell">
+  <label for="criteria">Criteria:</label>
+  <textarea id="criteria" name="criteria">{{values.criteria if values.criteria is defined else ''}}</textarea>
+  {% if errors.criteria %}
+  <p class="field-error">{{ errors.criteria }}</p>
+  {% endif %}
+</div>
+<div class="form_cell">
+  <label for="entry_fee_pln">Entry Fee (PLN):</label>
+    <input type="number" id="entry_fee_pln" name="entry_fee_pln" min="0.01" step="0.01" 
+    value="{{values.entry_fee_pln if values.entry_fee_pln is defined else ''}}">
+    {% if errors.entry_fee_pln %}
+    <p class="field-error">{{ errors.entry_fee_pln }}</p>
+    {% endif %}
+</div>
+<div class="form_cell_date">
+    <label for="join_deadline">Join Deadline:</label>
+    <input type="datetime-local" id="join_deadline" name="join_deadline" 
+    value="{{values.join_deadline if values.join_deadline is defined else ''}}">
+    {% if errors.join_deadline %}
+    <p class="field-error">{{ errors.join_deadline }}</p>
+    {% endif %}
+</div>
+<div class="form_cell_date">
+    <label for="proof_deadline">Proof Deadline:</label>
+    <input type="datetime-local" id="proof_deadline" name="proof_deadline" 
+    value="{{values.proof_deadline if values.proof_deadline is defined else ''}}">
+    {% if errors.proof_deadline %}
+    <p class="field-error">{{ errors.proof_deadline }}</p>
+    {% endif %}
+</div>
+  <button type="submit">Create</button>
+</form>
+
+
+
+
+{% endblock %}
