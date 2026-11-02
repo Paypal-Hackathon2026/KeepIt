@@ -136,7 +136,7 @@ def payment_success(
             "user": user,
             "challenge_id": challenge_id,
         })
-@router.get("/challenges/{challenge_id}/payment/cancel")
+@router.get("/challenges/{challenge_id}/payment/cancelled")
 def payment_cancel(
     challenge_id:UUID,
     request: Request,
@@ -144,6 +144,18 @@ def payment_cancel(
     return templates.TemplateResponse(
         request,
         "payment_cancel.html",
+        {
+            "user": user,
+            "challenge_id": challenge_id,
+        })
+@router.get("/challenges/{challenge_id}/payment/already_completed")
+def payment_already_completed(
+    challenge_id:UUID,
+    request: Request,
+    user: dict = Depends(current_user)):
+    return templates.TemplateResponse(
+        request,
+        "payment_already_completed.html",
         {
             "user": user,
             "challenge_id": challenge_id,

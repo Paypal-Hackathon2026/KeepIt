@@ -1,0 +1,21 @@
+{% extends "base_logged_in.html" %}
+
+{% block title %}Payment Cancelled · KeepIt{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/payment_message.css">
+{% endblock %}
+
+{% block content %}
+<div class="payment-message-container">
+  <section class="payment-message-card">
+    <h1 class="payment-message-title">Payment Cancelled</h1>
+    <p class="payment-message-text">
+      Your payment was cancelled. You have not been charged.
+    </p>
+    <div class="payment-message-actions">
+      <a href="/challenges/{{ challenge_id }}" class="payment-btn">Back to Challenge</a>
+    </div>
+  </section>
+</div>
+{% endblock %}
