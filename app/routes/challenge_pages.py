@@ -123,4 +123,28 @@ def pay_for_challenge(
 ):
     result = join_challenge(challenge_id=str(challenge_id), user_id=str(user["id"]))
     return RedirectResponse(url=result["approve_url"], status_code=303)
-    
+
+@router.get("/challenges/{challenge_id}/payment/success")
+def payment_success(
+    challenge_id: UUID,
+    request: Request,
+    user: dict = Depends(current_user)):
+    return templates.TemplateResponse(
+        request,
+        "payment_success.html",
+        {
+            "user": user,
+            "challenge_id": challenge_id,
+        })
+@router.get("/challenges/{challenge_id}/payment/cancel")
+def payment_cancel(
+    challenge_id:UUID,
+    request: Request,
+    user: dict = Depends(current_user)):
+    return templates.TemplateResponse(
+        request,
+        "payment_cancel.html",
+        {
+            "user": user,
+            "challenge_id": challenge_id,
+        })
