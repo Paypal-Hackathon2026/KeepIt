@@ -14,6 +14,8 @@ from app.services.challenge_service import (
 )
 from app.templating import templates
 
+from app.services.payment_service import join_challenge
+
 router = APIRouter()
 
 @router.get("/challenges/new")
@@ -114,3 +116,11 @@ def challenge_detail_page(
             "is_participant": my_participant is not None,
         },
     )
+@router.post("/challenges/{challenge_id}/pay")
+def pay_for_challenge(
+    challenge_id: UUID,
+    user: dict = Depends(current_user),
+):
+    result = join_challenge(challenge_id=str(challenge_id), user_id=str(user["id"]))
+    return RedirectResponse(url=result["approve_url"], status_code=303)
+    
