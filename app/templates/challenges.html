@@ -1,0 +1,54 @@
+{% extends "base_logged_in.html" %}
+
+{% block title %}My Challenges · KeepIt{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/challenges.css">
+{% endblock %}
+
+{% block content %}
+<section class="challenges-section">
+  <div class="challenges-header">
+    <h1 class="challenges-title">My challenges</h1>
+    <a href="/challenges/new" class="btn-primary mobile-new-btn">+ New challenge</a>
+  </div>
+
+  {% if challenges %}
+    <div class="challenges-grid">
+      {% for challenge in challenges %}
+        <a href="/challenges/{{ challenge.id }}" class="challenge-card">
+          <div class="challenge-card-top">
+            <span class="status-badge status-{{ challenge.status }}">
+              {{ challenge.status | capitalize }}
+            </span>
+            <span class="challenge-fee">
+              Entry: {{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN
+            </span>
+          </div>
+
+          <h2 class="challenge-card-title">{{ challenge.title }}</h2>
+
+          <div class="challenge-card-pool">
+            <span class="pool-label">Commitment Pool</span>
+            <span class="pool-amount">
+              {{ "%.2f"|format((challenge.pool_minor | default(0)) / 100) }} PLN
+            </span>
+          </div>
+
+          {% if challenge.proof_deadline_fmt %}
+            <p class="challenge-card-deadline">
+              Proof due: <strong>{{ challenge.proof_deadline_fmt }}</strong>
+            </p>
+          {% endif %}
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h2>No challenges yet!</h2>
+      <p>Make a pact with friends, put in an Entry Fee, and stick to your goals.</p>
+      <a href="/challenges/new" class="btn-primary">+ Create your first challenge</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
