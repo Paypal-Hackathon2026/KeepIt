@@ -69,6 +69,16 @@ create table if not exists payments (
 
 alter table payments enable row level security;
 
+--webhook events
+create table if not exists webhook_events (
+  event_id text primary key,
+  event_type text not null,
+  payload jsonb not null,
+  received_at timestamptz not null default now()
+);
+
+alter table webhook_events enable row level security;
+
 --evidence
 create table if not exists evidence (
   id uuid primary key default gen_random_uuid(),
