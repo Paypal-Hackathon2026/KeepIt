@@ -1,3 +1,5 @@
+import json
+import logging
 import time
 from decimal import Decimal
 from threading import Lock
@@ -5,6 +7,8 @@ from threading import Lock
 import httpx
 
 from app import config
+
+logger = logging.getLogger(__name__)
 
 
 _access_token: str | None = None
@@ -115,3 +119,51 @@ def capture_order(order_id: str) -> dict:
         raise RuntimeError("PayPal capture ID missing")
 
     return {"capture_id": capture_id, "response": response_json}
+
+
+def verify_webhook_signature(raw_body: bytes, headers: dict) -> bool:
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except Exception:
+        return False
+
+    normalized_headers = {str(k).lower(): v for k, v in headers.items()}
+    auth_algo = normalized_headers.get("paypal-auth-algo")
+    cert_url = normalized_headers.get("paypal-cert-url")
+    transmission_id = normalized_headers.get("paypal-transmission-id")
+    transmission_sig = normalized_headers.get("paypal-transmission-sig")
+    transmission_time = normalized_headers.get("paypal-transmission-time")
+
+    if not all([auth_algo, cert_url, transmission_id, transmission_sig, transmission_time]):
+        return False
+
+    webhook_id = getattr(config, "PAYPAL_WEBHOOK_ID", None)
+    if not webhook_id:
+        logger.error("PAYPAL_WEBHOOK_ID is not configured")
+        return False
+
+    verification_request = {
+        "auth_algo": auth_algo,
+        "cert_url": cert_url,
+        "transmission_id": transmission_id,
+        "transmission_sig": transmission_sig,
+        "transmission_time": transmission_time,
+        "webhook_id": webhook_id,
+        "webhook_event": payload,
+    }
+    try:
+        response = httpx.post(
+            f"{config.PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature",
+            headers={
+                "Authorization": f"Bearer {get_access_token()}",
+                "Content-Type": "application/json",
+            },
+            json=verification_request,
+            timeout=10,
+        )
+        if response.status_code >= 400:
+            return False
+        return response.json().get("verification_status") == "SUCCESS"
+    except Exception as exc:
+        logger.warning("Error verifying PayPal webhook signature: %s", exc)
+        return False
