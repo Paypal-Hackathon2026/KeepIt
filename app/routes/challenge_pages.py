@@ -14,6 +14,8 @@ from app.services.challenge_service import (
 )
 from app.templating import templates
 
+from app.services.payment_service import join_challenge
+
 router = APIRouter()
 
 @router.get("/challenges/new")
@@ -114,3 +116,47 @@ def challenge_detail_page(
             "is_participant": my_participant is not None,
         },
     )
+@router.post("/challenges/{challenge_id}/pay")
+def pay_for_challenge(
+    challenge_id: UUID,
+    user: dict = Depends(current_user),
+):
+    result = join_challenge(challenge_id=str(challenge_id), user_id=str(user["id"]))
+    return RedirectResponse(url=result["approve_url"], status_code=303)
+
+@router.get("/challenges/{challenge_id}/payment/success")
+def payment_success(
+    challenge_id: UUID,
+    request: Request,
+    user: dict = Depends(current_user)):
+    return templates.TemplateResponse(
+        request,
+        "payment_success.html",
+        {
+            "user": user,
+            "challenge_id": challenge_id,
+        })
+@router.get("/challenges/{challenge_id}/payment/cancelled")
+def payment_cancel(
+    challenge_id:UUID,
+    request: Request,
+    user: dict = Depends(current_user)):
+    return templates.TemplateResponse(
+        request,
+        "payment_cancel.html",
+        {
+            "user": user,
+            "challenge_id": challenge_id,
+        })
+@router.get("/challenges/{challenge_id}/payment/already_completed")
+def payment_already_completed(
+    challenge_id:UUID,
+    request: Request,
+    user: dict = Depends(current_user)):
+    return templates.TemplateResponse(
+        request,
+        "payment_already_completed.html",
+        {
+            "user": user,
+            "challenge_id": challenge_id,
+        })

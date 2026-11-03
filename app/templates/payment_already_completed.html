@@ -1,0 +1,21 @@
+{% extends "base_logged_in.html" %}
+
+{% block title %}Payment Already Completed · KeepIt{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/payment_message.css">
+{% endblock %}
+
+{% block content %}
+<div class="payment-message-container">
+  <section class="payment-message-card">
+    <h1 class="payment-message-title">Payment Already Completed</h1>
+    <p class="payment-message-text">
+      This payment has already been processed successfully. You are already an active participant in this challenge.
+    </p>
+    <div class="payment-message-actions">
+      <a href="/challenges/{{ challenge_id }}" class="payment-btn">Go to Challenge</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

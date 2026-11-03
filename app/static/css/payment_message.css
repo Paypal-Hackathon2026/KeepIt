@@ -1,0 +1,74 @@
+.payment-message-container {
+  flex: 1;
+  min-height: calc(100vh - 180px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.payment-message-card {
+  width: 100%;
+  max-width: clamp(32rem, 55vw, 44rem);
+  background: var(--surface);
+  border-radius: 28px;
+  padding: clamp(48px, 6vw, 72px) clamp(28px, 5vw, 56px);
+  box-shadow: 10px 10px 0 var(--pink);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(16px, 2.5vw, 24px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.payment-message-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4.5vw, 48px);
+  color: var(--blue);
+  line-height: 1.15;
+}
+
+.payment-message-text {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: clamp(17px, 2vw, 20px);
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 32rem;
+}
+
+.payment-message-actions {
+  margin-top: clamp(12px, 2vw, 20px);
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.payment-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 14px 44px;
+  border-radius: var(--radius-pill);
+  background: var(--orange);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: clamp(17px, 2vw, 19px);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-pop);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+}
+
+.payment-btn:hover {
+  background: var(--orange-dark);
+}
+
+.payment-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--blue);
+}

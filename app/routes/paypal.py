@@ -9,7 +9,7 @@ def paypal_return(token: str, user: dict = Depends(current_user)):
     """Handle PayPal return after payment approval."""
     payment = complete_payment(paypal_order_id=token, user_id=user["id"])
     return RedirectResponse(
-        url=f"/challenges/{payment['challenge_id']}?payment=success",
+        url=f"/challenges/{payment['challenge_id']}/payment/success",
         status_code=303,
     )
 
@@ -24,6 +24,6 @@ def paypal_cancel(token: str, user: dict = Depends(current_user)):
         else "cancelled"
     )
     return RedirectResponse(
-        url=f"/challenges/{payment['challenge_id']}?payment={message}",
+        url=f"/challenges/{payment['challenge_id']}/payment/{message}",
         status_code=303,
     )

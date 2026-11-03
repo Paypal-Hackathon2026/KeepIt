@@ -45,8 +45,8 @@ def paypal_callback(
 
     request.session["profile_id"] = profile["id"]
 
-    # TODO: change to "/" once the home page exists
-    return RedirectResponse("/api/me", status_code=303)
+
+    return RedirectResponse("/challenges", status_code=303)
 
 @router.get("/api/me")
 def me(user: dict = Depends(current_user)):
