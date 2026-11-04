@@ -65,6 +65,14 @@
             enctype="multipart/form-data"
             class="proof-form">
         <h2 class="section-heading">Upload your proof</h2>
+
+        {% if proof_uploaded %}
+          <p class="field-success">Photo uploaded!</p>
+        {% endif %}
+        {% if proof_error %}
+          <p class="field-error">{{ proof_error }}</p>
+        {% endif %}
+
         <p class="proof-hint">
           Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
         </p>

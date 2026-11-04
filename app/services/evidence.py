@@ -22,9 +22,9 @@ def save_evidence(challenge_id: str, user_id: str, photo: bytes) -> dict:
 
     jpeg = to_jpeg(photo)
     path = f"{challenge_id}/{user_id}/{attempt}.jpg"
-
+    
     supabase.storage.from_(BUCKET).upload(
-        path, jpeg, {"content-type": "image/jpeg"}
+    path, jpeg, {"content-type": "image/jpeg", "upsert": "true"}
     )
 
     result = (

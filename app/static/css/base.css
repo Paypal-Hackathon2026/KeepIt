@@ -14,6 +14,12 @@
   --text-muted: #5a63a8;
   --surface: #ffffff;
 
+  --green: #1b5e20;
+  --green-light: #e8f5e9;
+
+  --red: #c62828;
+  --red-light: #ffebee;
+
   --font-display: "Lilita One", "Arial Rounded MT Bold", sans-serif;
   --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
 
@@ -174,4 +180,18 @@ body {
 
 html, body {
   scrollbar-color: var(--blue) var(--cream-dark);
+}
+
+.field-error {
+  margin: 2px 0 0;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.field-success {
+  margin: 2px 0 0;
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 600;
 }

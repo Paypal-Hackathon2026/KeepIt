@@ -18,6 +18,11 @@ from app.services.payment_service import join_challenge
 from app.services.evidence import save_evidence
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+PROOF_ERRORS = {
+    "too_big": "Photo is too big (max 15 MB).",
+    "not_image": "This file is not a photo. Try again.",
+    "no_attempts": "You have used all 3 attempts.",
+}
 
 router = APIRouter()
 
@@ -92,6 +97,8 @@ def challenge_detail_page(
     challenge_id: UUID,
     request: Request,
     user: Annotated[dict, Depends(current_user)],
+    proof: str | None = None,
+    proof_error: str | None = None,
 ):
     
     challenge = get_challenge_by_id(challenge_id)
@@ -117,6 +124,8 @@ def challenge_detail_page(
             "challenge": challenge,
             "has_paid": has_paid,
             "is_participant": my_participant is not None,
+            "proof_error": PROOF_ERRORS.get(proof_error),
+            "proof_uploaded": proof == "uploaded",
         },
     )
 @router.post("/challenges/{challenge_id}/pay")

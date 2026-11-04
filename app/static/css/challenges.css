@@ -198,13 +198,13 @@
 }
 
 .status-settled {
-  background: #e8f5e9;
-  color: #1b5e20;
+  background: var(--green-light);
+  color: var(--green);
 }
 
 .status-cancelled {
-  background: #ffebee;
-  color: #c62828;
+  background: var(--red-light);
+  color: var(--red);
 }
 
 /* Empty State */
@@ -428,13 +428,13 @@
 }
 
 .badge-paid {
-  background: #e8f5e9;
-  color: #1b5e20;
+  background: var(--green-light);
+  color: var(--green);
 }
 
 .badge-unpaid {
-  background: #ffebee;
-  color: #c62828;
+  background: var(--red-light);
+  color: var(--red);
 }
 
 .proof-form {
