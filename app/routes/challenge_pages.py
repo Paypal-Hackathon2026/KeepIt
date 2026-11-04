@@ -1,9 +1,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, File, UploadFile
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
+from PIL import Image, UnidentifiedImageError
 
 from app.deps import current_user
 from app.models.challenge import ChallengeCreate
@@ -13,8 +14,15 @@ from app.services.challenge_service import (
     get_user_challenges,
 )
 from app.templating import templates
-
 from app.services.payment_service import join_challenge
+from app.services.evidence import save_evidence
+
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+PROOF_ERRORS = {
+    "too_big": "Photo is too big (max 15 MB).",
+    "not_image": "This file is not a photo. Try again.",
+    "no_attempts": "You have used all 3 attempts.",
+}
 
 router = APIRouter()
 
@@ -89,6 +97,8 @@ def challenge_detail_page(
     challenge_id: UUID,
     request: Request,
     user: Annotated[dict, Depends(current_user)],
+    proof: str | None = None,
+    proof_error: str | None = None,
 ):
     
     challenge = get_challenge_by_id(challenge_id)
@@ -114,6 +124,8 @@ def challenge_detail_page(
             "challenge": challenge,
             "has_paid": has_paid,
             "is_participant": my_participant is not None,
+            "proof_error": PROOF_ERRORS.get(proof_error),
+            "proof_uploaded": proof == "uploaded",
         },
     )
 @router.post("/challenges/{challenge_id}/pay")
@@ -160,3 +172,36 @@ def payment_already_completed(
             "user": user,
             "challenge_id": challenge_id,
         })
+    
+@router.post("/challenges/{challenge_id}/evidence")
+def upload_evidence(
+    challenge_id: UUID,
+    photo: UploadFile = File(...),
+    user: dict = Depends(current_user),
+):
+    back = f"/challenges/{challenge_id}"
+
+    challenge = get_challenge_by_id(challenge_id)
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+
+    me = next(
+        (p for p in challenge.get("participants", [])
+         if str(p.get("user_id")) == str(user["id"])),
+        None,
+    )
+    if not me or not me.get("paid"):
+        raise HTTPException(status_code=403, detail="Only paid participants can upload proof")
+
+    data = photo.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        return RedirectResponse(f"{back}?proof_error=too_big", status_code=303)
+
+    try:
+        save_evidence(str(challenge_id), str(user["id"]), data)
+    except ValueError:
+        return RedirectResponse(f"{back}?proof_error=no_attempts", status_code=303)
+    except (UnidentifiedImageError, Image.DecompressionBombError):
+        return RedirectResponse(f"{back}?proof_error=not_image", status_code=303)
+
+    return RedirectResponse(f"{back}?proof=uploaded", status_code=303)

@@ -198,13 +198,13 @@
 }
 
 .status-settled {
-  background: #e8f5e9;
-  color: #1b5e20;
+  background: var(--green-light);
+  color: var(--green);
 }
 
 .status-cancelled {
-  background: #ffebee;
-  color: #c62828;
+  background: var(--red-light);
+  color: var(--red);
 }
 
 /* Empty State */
@@ -428,11 +428,106 @@
 }
 
 .badge-paid {
-  background: #e8f5e9;
-  color: #1b5e20;
+  background: var(--green-light);
+  color: var(--green);
 }
 
 .badge-unpaid {
-  background: #ffebee;
-  color: #c62828;
+  background: var(--red-light);
+  color: var(--red);
+}
+
+.proof-form {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 2px dashed var(--cream-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.proof-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.proof-chip {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--pink);
+  color: var(--blue);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+}
+
+.proof-drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 180px;
+  padding: 20px;
+  border: 3px dashed var(--blue);
+  border-radius: var(--radius);
+  background: var(--cream);
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.proof-drop:hover {
+  transform: translateY(-2px);
+}
+
+.proof-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.proof-drop-icon {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--blue);
+}
+
+.proof-drop-text {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--blue);
+}
+
+.proof-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.proof-state-ready {
+  display: none;
+}
+
+.proof-drop:has(.proof-input:valid) {
+  border-style: solid;
+  border-color: #b4b4c2;
+  background: #f1f1f4;
+}
+
+.proof-drop:has(.proof-input:valid) .proof-drop-icon,
+.proof-drop:has(.proof-input:valid) .proof-drop-text {
+  color: #8a8a9a;
+}
+
+.proof-drop:has(.proof-input:valid) .proof-state-empty {
+  display: none;
+}
+
+.proof-drop:has(.proof-input:valid) .proof-state-ready {
+  display: flex;
 }
