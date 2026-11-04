@@ -20,7 +20,18 @@
       <p>{{ error }}</p>
     {% endif %}
 
-    <a href="/auth/paypal/login" class="login-button">Log in with PayPal</a>
+    <a href="/auth/paypal/login" class="login-button" id="login-btn">Log in with PayPal</a>
   </div>
 </main>
+
+<script>
+document.getElementById("login-btn").addEventListener("click", (e) => {
+  e.currentTarget.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to PayPal…';
+  e.currentTarget.classList.add("is-loading");
+});
+
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) location.reload();
+});
+</script>
 {% endblock %}
