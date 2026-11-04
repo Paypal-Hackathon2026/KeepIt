@@ -59,11 +59,19 @@ body {
 }
 
 .topbar-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-display);
   font-size: 28px;
   color: var(--blue);
   text-decoration: none;
   letter-spacing: 0.02em;
+}
+
+.topbar-coin {
+  width: 36px;
+  height: 36px;
 }
 
 .topbar-actions {
