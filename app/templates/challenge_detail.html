@@ -4,6 +4,7 @@
 
 {% block styles %}
   <link rel="stylesheet" href="/static/css/challenges.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 {% endblock %}
 
 {% block content %}
@@ -57,6 +58,36 @@
         </button>
       </form>
     {% endif %}
+
+    {% if has_paid %}
+      <form method="post"
+            action="/challenges/{{ challenge.id }}/evidence"
+            enctype="multipart/form-data"
+            class="proof-form">
+        <h2 class="section-heading">Upload your proof</h2>
+        <p class="proof-hint">
+          Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
+        </p>
+
+        <label class="proof-drop">
+          <input type="file" name="photo" accept="image/*" capture="environment"
+                 required class="proof-input">
+
+          <span class="proof-state proof-state-empty">
+            <span class="proof-drop-icon"><i class="fa-solid fa-camera"></i></span>
+            <span class="proof-drop-text">Tap to choose a photo</span>
+          </span>
+
+          <span class="proof-state proof-state-ready">
+            <span class="proof-drop-icon"><i class="fa-solid fa-circle-check"></i></span>
+            <span class="proof-drop-text">Click to change the photo</span>
+          </span>
+        </label>
+
+        <button type="submit" class="btn-primary btn-full">Upload proof</button>
+      </form>
+    {% endif %}
+
   </section>
 
   <section class="participants-card">
