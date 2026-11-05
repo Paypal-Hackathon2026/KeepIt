@@ -4,7 +4,6 @@
 
 {% block styles %}
   <link rel="stylesheet" href="/static/css/challenges.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 {% endblock %}
 
 {% block content %}
@@ -52,8 +51,8 @@
     </div>
 
     {% if not has_paid and challenge.status == 'open' %}
-      <form method="post" action="/challenges/{{ challenge.id }}/pay" class="join-pay-form">
-        <button type="submit" class="btn-primary btn-full">
+      <form method="post" action="/challenges/{{ challenge.id }}/pay" class="join-pay-form" id="pay-form">
+        <button type="submit" class="btn-primary btn-full" id="pay-btn">
           Join &amp; pay ({{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN)
         </button>
       </form>
@@ -138,5 +137,15 @@ function copyInviteLink() {
     setTimeout(() => { btn.textContent = original; }, 2000);
   });
 }
+
+document.getElementById("pay-form")?.addEventListener("submit", () => {
+  const btn = document.getElementById("pay-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to PayPal…';
+});
+
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) location.reload();
+});
 </script>
 {% endblock %}

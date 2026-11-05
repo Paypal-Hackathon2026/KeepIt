@@ -68,3 +68,9 @@
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0 var(--blue);
 }
+
+.login-button.is-loading {
+  gap: 8px;
+  opacity: 0.85;
+  pointer-events: none;
+}
