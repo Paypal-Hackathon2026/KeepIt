@@ -531,3 +531,9 @@
 .proof-drop:has(.proof-input:valid) .proof-state-ready {
   display: flex;
 }
+
+.btn-primary:disabled {
+  gap: 8px;
+  opacity: 0.85;
+  cursor: wait;
+}
