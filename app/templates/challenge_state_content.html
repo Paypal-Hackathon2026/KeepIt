@@ -28,24 +28,24 @@
   {% endif %}
 </section>
 
-<section class="ledger-card">
-  <h2 class="section-heading">Payment Ledger</h2>
+<section class="history-card">
+  <h2 class="section-heading">Payment History</h2>
 
   {% set paid_participants = challenge.participants | selectattr("paid") | list %}
   {% if paid_participants %}
-    <ul class="ledger-list">
+    <ul class="history-list">
       {% for p in paid_participants | sort(attribute="joined_at", reverse=true) %}
-        <li class="ledger-row">
-          <div class="ledger-user">
+        <li class="history-row">
+          <div class="history-user">
             <span class="participant-avatar">
               {{ (p.display_name or "?")[0] | upper }}
             </span>
-            <div class="ledger-user-details">
-              <span class="ledger-name">{{ p.display_name or "Participant" }}</span>
-              <span class="ledger-time">{{ p.joined_at_fmt }}</span>
+            <div class="history-user-details">
+              <span class="history-name">{{ p.display_name or "Participant" }}</span>
+              <span class="history-time">{{ p.joined_at_fmt }}</span>
             </div>
           </div>
-          <div class="ledger-amount">
+          <div class="history-amount">
             +{{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN
           </div>
         </li>

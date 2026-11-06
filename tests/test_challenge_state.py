@@ -88,15 +88,15 @@ def test_challenge_state_fragment_content():
         assert "Paid" in html
         assert "Unpaid" in html
 
-        # Payment Ledger section
-        assert "Payment Ledger" in html
+        # Payment History section
+        assert "Payment History" in html
         assert "+10.00 PLN" in html
         assert "2026-11-06 10:00" in html
         assert "2026-11-06 11:30" in html
 
-        # Charlie Lurker is unpaid so should not appear in payment ledger
-        # We can check that only 2 ledger rows are rendered
-        assert html.count("ledger-row") == 2
+        # Charlie Lurker is unpaid so should not appear in payment history
+        # We can check that only 2 history rows are rendered
+        assert html.count("history-row") == 2
 
 
 def test_challenge_detail_page_has_htmx_trigger():
@@ -132,5 +132,5 @@ def test_challenge_detail_page_has_htmx_trigger():
         assert f'hx-get="/challenges/{challenge_id}/state"' in html
         assert 'hx-trigger="every 3s"' in html
         assert 'hx-swap="innerHTML"' in html
-        assert "Payment Ledger" in html
+        assert "Payment History" in html
 
