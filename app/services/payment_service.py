@@ -86,15 +86,21 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
         len(payments_response.data or []),
     )
     for payment in payments_response.data or []:
-        if payment["status"]=="captured":
+        if payment["status"] == "captured":
             raise HTTPException(
                 status_code=409,
                 detail="User has already joined the challenge and paid",
             )
-        if payment["status"]=="created":
-            raise HTTPException(
-                status_code=409,
-                detail=f"A payment is already in progress",)
+
+    for payment in payments_response.data or []:
+        if payment["status"] == "created":
+            logger.info(
+                "cancelling stale created payment: payment_id=%s challenge_id=%s user_id=%s",
+                payment["id"],
+                challenge_id,
+                user_id,
+            )
+            supabase.table("payments").update({"status": "cancelled"}).eq("id", payment["id"]).eq("status", "created").execute()
 
     try:
         logger.info(
