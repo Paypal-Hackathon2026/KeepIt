@@ -256,7 +256,9 @@
 }
 
 .detail-card,
-.participants-card {
+.participants-card,
+.history-card,
+.ledger-card {
   background: var(--surface);
   border-radius: 24px;
   padding: 24px 20px;
@@ -268,7 +270,9 @@
 
 @media (min-width: 640px) {
   .detail-card,
-  .participants-card {
+  .participants-card,
+  .history-card,
+  .ledger-card {
     padding: 32px 32px;
   }
 }
@@ -536,4 +540,65 @@
   gap: 8px;
   opacity: 0.85;
   cursor: wait;
+}
+
+#challenge-state {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.history-list,
+.ledger-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-row,
+.ledger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--cream);
+  border-radius: 12px;
+}
+
+.history-user,
+.ledger-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-user-details,
+.ledger-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-name,
+.ledger-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.history-time,
+.ledger-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.history-amount,
+.ledger-amount {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--green);
 }

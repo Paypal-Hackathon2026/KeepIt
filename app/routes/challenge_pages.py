@@ -76,6 +76,18 @@ def _format_deadline(value) -> str:
     s = str(value).replace("T", " ")
     return s[:16]
 
+
+def _prepare_challenge_view(challenge: dict) -> dict:
+    """
+    Format deadline and participant timestamps for display.
+    """
+    challenge["join_deadline_fmt"] = _format_deadline(challenge.get("join_deadline"))
+    challenge["proof_deadline_fmt"] = _format_deadline(challenge.get("proof_deadline"))
+    for p in challenge.get("participants", []):
+        p["joined_at_fmt"] = _format_deadline(p.get("joined_at"))
+    return challenge
+
+
 @router.get("/challenges")
 def my_challenges_page(request: Request, user: Annotated[dict, Depends(current_user)]):
     
@@ -106,8 +118,7 @@ def challenge_detail_page(
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
 
-    challenge["join_deadline_fmt"] = _format_deadline(challenge.get("join_deadline"))
-    challenge["proof_deadline_fmt"] = _format_deadline(challenge.get("proof_deadline"))
+    _prepare_challenge_view(challenge)
 
     participants = challenge.get("participants", [])
     my_participant = next(
@@ -126,6 +137,28 @@ def challenge_detail_page(
             "is_participant": my_participant is not None,
             "proof_error": PROOF_ERRORS.get(proof_error),
             "proof_uploaded": proof == "uploaded",
+        },
+    )
+
+
+@router.get("/challenges/{challenge_id}/state")
+def challenge_state_fragment(
+    challenge_id: UUID,
+    request: Request,
+    user: Annotated[dict, Depends(current_user)],
+):
+    challenge = get_challenge_by_id(challenge_id)
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+
+    _prepare_challenge_view(challenge)
+
+    return templates.TemplateResponse(
+        request,
+        "challenge_state.html",
+        {
+            "user": user,
+            "challenge": challenge,
         },
     )
 @router.post("/challenges/{challenge_id}/pay")

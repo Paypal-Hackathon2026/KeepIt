@@ -1,0 +1,14 @@
+<div id="pool-banner" class="pool-banner" hx-swap-oob="outerHTML">
+  <div>
+    <span class="pool-banner-label">Commitment Pool</span>
+    <div class="pool-banner-value">
+      {{ "%.2f"|format((challenge.pool_minor | default(0)) / 100) }} PLN
+    </div>
+  </div>
+  <div class="pool-banner-fee">
+    Entry fee: <strong>{{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN</strong>
+  </div>
+</div>
+
+{% include "challenge_state_content.html" %}
+

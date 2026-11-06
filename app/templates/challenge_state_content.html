@@ -1,0 +1,58 @@
+<section class="participants-card">
+  <h2 class="section-heading">
+    Participants ({{ challenge.participants | length }})
+  </h2>
+
+  {% if challenge.participants %}
+    <ul class="participants-list">
+      {% for p in challenge.participants %}
+        <li class="participant-row">
+          <div class="participant-info">
+            <span class="participant-avatar">
+              {{ (p.display_name or "?")[0] | upper }}
+            </span>
+            <span class="participant-name">{{ p.display_name or "Participant" }}</span>
+          </div>
+          <div class="participant-badges">
+            {% if p.paid %}
+              <span class="badge-paid">Paid</span>
+            {% else %}
+              <span class="badge-unpaid">Unpaid</span>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">No participants yet.</p>
+  {% endif %}
+</section>
+
+<section class="history-card">
+  <h2 class="section-heading">Payment History</h2>
+
+  {% set paid_participants = challenge.participants | selectattr("paid") | list %}
+  {% if paid_participants %}
+    <ul class="history-list">
+      {% for p in paid_participants | sort(attribute="joined_at", reverse=true) %}
+        <li class="history-row">
+          <div class="history-user">
+            <span class="participant-avatar">
+              {{ (p.display_name or "?")[0] | upper }}
+            </span>
+            <div class="history-user-details">
+              <span class="history-name">{{ p.display_name or "Participant" }}</span>
+              <span class="history-time">{{ p.joined_at_fmt }}</span>
+            </div>
+          </div>
+          <div class="history-amount">
+            +{{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">No payments yet.</p>
+  {% endif %}
+</section>
+
