@@ -23,7 +23,7 @@
     <h1 class="detail-title">{{ challenge.title }}</h1>
     <p class="detail-criteria">{{ challenge.criteria }}</p>
 
-    <div class="pool-banner">
+    <div class="pool-banner" id="pool-banner">
       <div>
         <span class="pool-banner-label">Commitment Pool</span>
         <div class="pool-banner-value">
@@ -97,35 +97,12 @@
 
   </section>
 
-  <section class="participants-card">
-    <h2 class="section-heading">
-      Participants ({{ challenge.participants | length }})
-    </h2>
-
-    {% if challenge.participants %}
-      <ul class="participants-list">
-        {% for p in challenge.participants %}
-          <li class="participant-row">
-            <div class="participant-info">
-              <span class="participant-avatar">
-                {{ (p.display_name or "?")[0] | upper }}
-              </span>
-              <span class="participant-name">{{ p.display_name or "Participant" }}</span>
-            </div>
-            <div class="participant-badges">
-              {% if p.paid %}
-                <span class="badge-paid">Paid</span>
-              {% else %}
-                <span class="badge-unpaid">Unpaid</span>
-              {% endif %}
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="text-muted">No participants yet.</p>
-    {% endif %}
-  </section>
+  <div id="challenge-state"
+       hx-get="/challenges/{{ challenge.id }}/state"
+       hx-trigger="every 3s"
+       hx-swap="innerHTML">
+    {% include "challenge_state_content.html" %}
+  </div>
 </div>
 
 <script>
