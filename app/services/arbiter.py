@@ -93,3 +93,15 @@ def save_verdict(evidence_id: str, verdict: Verdict, model: str) -> dict:
         .execute()
     )
     return result.data[0]
+
+APPROVE_AT = 0.7
+VOTE_AT = 0.4
+
+def decide(verdict: Verdict) -> str:
+    if "missing_code" in verdict.fraud_flags:
+        return "rejected"
+    if verdict.confidence >= APPROVE_AT:
+        return "auto_approved"
+    if verdict.confidence >= VOTE_AT:
+        return "needs_vote"
+    return "rejected"

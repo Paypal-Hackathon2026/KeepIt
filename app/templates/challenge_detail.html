@@ -59,89 +59,14 @@
     {% endif %}
 
     {% if has_paid %}
-      <form method="post"
-            action="/challenges/{{ challenge.id }}/evidence"
-            enctype="multipart/form-data"
-            class="proof-form"
-            id="proof-form">
-        <h2 class="section-heading">Upload your proof</h2>
-
-        {% if proof_uploaded %}
-          <p class="field-success">Photo uploaded!</p>
-        {% endif %}
-        {% if proof_sent_to_vote %}
-          <p class="field-error">The AI Arbiter is busy right now, so your photo was sent to a group vote.</p>
-        {% endif %}
-        {% if proof_error %}
-          <p class="field-error">{{ proof_error }}</p>
-        {% endif %}
-
-        <p class="proof-hint">
-          Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
-        </p>
-
-        <label class="proof-drop">
-          <input type="file" name="photo" accept="image/*" capture="environment"
-                 required class="proof-input">
-
-          <span class="proof-state proof-state-empty">
-            <span class="proof-drop-icon"><i class="fa-solid fa-camera"></i></span>
-            <span class="proof-drop-text">Tap to choose a photo</span>
-          </span>
-
-          <span class="proof-state proof-state-ready">
-            <span class="proof-drop-icon"><i class="fa-solid fa-circle-check"></i></span>
-            <span class="proof-drop-text">Click to change the photo</span>
-          </span>
-        </label>
-
-        <div class="proof-progress" id="proof-progress" hidden>
-          <div class="proof-progress-bar"></div>
-        </div>
-        <button type="submit" class="btn-primary btn-full" id="proof-btn">Upload proof</button>
-      </form>
-
-      {% if attempts %}
-        <div class="attempts-section">
-          <h2 class="section-heading">Your attempts</h2>
-          {% for a in attempts %}
-            <div class="verdict-card">
-              {% if a.photo_url %}
-                <img class="verdict-photo" src="{{ a.photo_url }}" alt="Proof photo, attempt {{ a.attempt }}">
-              {% endif %}
-              <div class="verdict-content">
-                <p class="verdict-title">AI Arbiter's opinion</p>
-                <p class="verdict-attempt-number">Attempt {{ a.attempt }} of {{ max_attempts }}</p>
-
-                {% if a.verdict %}
-                  {% if a.verdict.verified %}
-                    <p class="verdict-result verdict-ok">
-                      <i class="fa-solid fa-circle-check"></i> Looks completed
-                    </p>
-                  {% else %}
-                    <p class="verdict-result verdict-no">
-                      <i class="fa-solid fa-circle-xmark"></i> Doesn't look completed
-                    </p>
-                  {% endif %}
-
-                  <p class="verdict-confidence">Confidence of success: {{ (a.verdict.confidence * 100) | round | int }}%</p>
-                  <p class="verdict-reason">{{ a.verdict.reasoning }}</p>
-
-                  {% if a.verdict.fraud_flags %}
-                    <div class="verdict-flags">
-                      {% for flag in a.verdict.fraud_flags %}
-                        <span class="verdict-flag">{{ flag | replace("_", " ") }}</span>
-                      {% endfor %}
-                    </div>
-                  {% endif %}
-                {% else %}
-                  <p class="verdict-pending">Waiting for a group vote</p>
-                {% endif %}
-              </div>
-            </div>
-          {% endfor %}
-        </div>
+      {% if my_outcome == "verified" %}
+        <p class="field-success">You completed this challenge!</p>
+      {% elif my_outcome == "forfeited" %}
+        <p class="field-error">You used all your attempts for this challenge.</p>
+      {% else %}
+        {% include "partials/proof_form.html" %}
       {% endif %}
+      {% include "partials/attempts.html" %}
     {% endif %}
 
   </section>

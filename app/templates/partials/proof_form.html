@@ -1,0 +1,46 @@
+<form method="post"
+      action="/challenges/{{ challenge.id }}/evidence"
+      enctype="multipart/form-data"
+      class="proof-form"
+      id="proof-form">
+  <h2 class="section-heading">Upload your proof</h2>
+
+  {% if proof_result == "auto_approved" %}
+    <p class="field-success">Your proof was approved!</p>
+  {% elif proof_result == "needs_vote" %}
+    <p class="field-error">The AI Arbiter wasn't sure, so your photo goes to a group vote.</p>
+  {% elif proof_result == "rejected" %}
+    <p class="field-error">Your proof was rejected. Try another photo.</p>
+  {% endif %}
+
+  {% if proof_sent_to_vote %}
+    <p class="field-error">The AI Arbiter is busy right now, so your photo was sent to a group vote.</p>
+  {% endif %}
+  {% if proof_error %}
+    <p class="field-error">{{ proof_error }}</p>
+  {% endif %}
+
+  <p class="proof-hint">
+    Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
+  </p>
+
+  <label class="proof-drop">
+    <input type="file" name="photo" accept="image/*" capture="environment"
+           required class="proof-input">
+
+    <span class="proof-state proof-state-empty">
+      <span class="proof-drop-icon"><i class="fa-solid fa-camera"></i></span>
+      <span class="proof-drop-text">Tap to choose a photo</span>
+    </span>
+
+    <span class="proof-state proof-state-ready">
+      <span class="proof-drop-icon"><i class="fa-solid fa-circle-check"></i></span>
+      <span class="proof-drop-text">Click to change the photo</span>
+    </span>
+  </label>
+
+  <div class="proof-progress" id="proof-progress" hidden>
+    <div class="proof-progress-bar"></div>
+  </div>
+  <button type="submit" class="btn-primary btn-full" id="proof-btn">Upload proof</button>
+</form>

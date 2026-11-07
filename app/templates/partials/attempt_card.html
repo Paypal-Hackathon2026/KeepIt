@@ -1,0 +1,33 @@
+<div class="verdict-card">
+  {% if a.photo_url %}
+    <img class="verdict-photo" src="{{ a.photo_url }}" alt="Proof photo, attempt {{ a.attempt }}">
+  {% endif %}
+  <div class="verdict-content">
+    <p class="verdict-title">AI Arbiter's opinion</p>
+    <p class="verdict-attempt-number">Attempt {{ a.attempt }} of {{ max_attempts }}</p>
+
+    {% if a.status == "auto_approved" or a.status == "approved" %}
+      <p class="verdict-result verdict-ok"><i class="fa-solid fa-circle-check"></i> Verified</p>
+    {% elif a.status == "needs_vote" %}
+      <p class="verdict-result verdict-vote"><i class="fa-solid fa-users"></i> Needs voting</p>
+    {% elif a.status == "rejected" %}
+      <p class="verdict-result verdict-no"><i class="fa-solid fa-circle-xmark"></i> Rejected</p>
+    {% else %}
+      <p class="verdict-result verdict-pending"><i class="fa-solid fa-hourglass-half"></i> Checking</p>
+    {% endif %}
+
+    {% if a.verdict %}
+      {% set v = a.verdict %}
+      <p class="verdict-confidence">Confidence of success: {{ (v.confidence * 100) | round | int }}%</p>
+      <p class="verdict-reason">{{ v.reasoning }}</p>
+
+      {% if v.fraud_flags %}
+        <div class="verdict-flags">
+          {% for flag in v.fraud_flags %}
+            <span class="verdict-flag">{{ flag | replace("_", " ") }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
