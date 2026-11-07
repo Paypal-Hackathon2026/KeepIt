@@ -22,3 +22,6 @@ SUPABASE_SECRET_KEY = _require("SUPABASE_SECRET_KEY")
 
 PAYPAL_API_BASE = os.getenv("PAYPAL_API_BASE", "https://api-m.sandbox.paypal.com")
 PAYPAL_WEB_BASE = os.getenv("PAYPAL_WEB_BASE", "https://www.sandbox.paypal.com")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODELS = [m.strip() for m in os.getenv("GEMINI_MODELS", "").split(",") if m.strip()]
