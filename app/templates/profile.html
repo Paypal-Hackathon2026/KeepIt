@@ -1,0 +1,66 @@
+{% extends "base_logged_in.html" %}
+
+{% block title %}My Profile · KeepIt{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/profile.css">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+  <a href="/challenges" class="back-link">← Back to my challenges</a>
+
+  <section class="profile-card">
+    <div class="profile-header">
+      <div class="profile-avatar">
+        {{ (user.display_name or "?")[0] | upper }}
+      </div>
+      <div class="profile-header-info">
+        <h1 class="profile-name">{{ user.display_name }}</h1>
+        <p class="profile-email">
+          <i class="fa-brands fa-paypal"></i> {{ user.paypal_email }}
+        </p>
+        {% if user.member_since %}
+          <p class="profile-member-since">
+            Member since {{ user.member_since }}
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="profile-stats-grid">
+      <div class="stat-box net-result-box">
+        <span class="stat-label">Net result</span>
+        <span class="stat-value net-result {% if stats.net_result_minor > 0 %}net-positive{% elif stats.net_result_minor < 0 %}net-negative{% endif %}">
+          {{ stats.net_result_fmt }}
+        </span>
+        <span class="stat-caption">All-time payouts minus entry fees</span>
+      </div>
+
+      <div class="stat-box">
+        <span class="stat-label">In active challenges</span>
+        <span class="stat-value active-amount">
+          {{ stats.active_challenges_amount_fmt }}
+        </span>
+        <span class="stat-caption">Paid, not settled yet</span>
+      </div>
+
+      <div class="stat-box">
+        <span class="stat-label">Challenges joined</span>
+        <span class="stat-value">
+          {{ stats.challenges_joined }}
+        </span>
+        <span class="stat-caption">Total joined</span>
+      </div>
+
+      <div class="stat-box">
+        <span class="stat-label">Challenges completed</span>
+        <span class="stat-value">
+          {{ stats.challenges_completed }}
+        </span>
+        <span class="stat-caption">Successfully verified</span>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

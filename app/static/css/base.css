@@ -165,6 +165,19 @@ body {
   margin: 0;
 }
 
+.avatar-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: underline;
+  text-align: left;
+  display: block;
+}
+
+.avatar-link:hover {
+  color: var(--blue-dark);
+}
+
 .link-button {
   background: none;
   border: none;
