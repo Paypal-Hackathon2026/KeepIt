@@ -15,7 +15,13 @@ from app.services.challenge_service import (
 )
 from app.templating import templates
 from app.services.payment_service import join_challenge
-from app.services.evidence import save_evidence
+from app.services.evidence import (
+    MAX_ATTEMPTS,
+    get_my_evidence,
+    save_evidence,
+    send_to_vote,
+)
+from app.services.arbiter import judge, save_verdict
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 PROOF_ERRORS = {
@@ -126,6 +132,7 @@ def challenge_detail_page(
         None,
     )
     has_paid = bool(my_participant and my_participant.get("paid"))
+    attempts = get_my_evidence(str(challenge_id), str(user["id"])) if has_paid else []
 
     return templates.TemplateResponse(
         request,
@@ -137,6 +144,9 @@ def challenge_detail_page(
             "is_participant": my_participant is not None,
             "proof_error": PROOF_ERRORS.get(proof_error),
             "proof_uploaded": proof == "uploaded",
+            "proof_sent_to_vote": proof == "sent_to_vote",
+            "attempts": attempts,
+            "max_attempts": MAX_ATTEMPTS,
         },
     )
 
@@ -231,10 +241,17 @@ def upload_evidence(
         return RedirectResponse(f"{back}?proof_error=too_big", status_code=303)
 
     try:
-        save_evidence(str(challenge_id), str(user["id"]), data)
+        evidence, jpeg = save_evidence(str(challenge_id), str(user["id"]), data)
     except ValueError:
         return RedirectResponse(f"{back}?proof_error=no_attempts", status_code=303)
     except (UnidentifiedImageError, Image.DecompressionBombError):
         return RedirectResponse(f"{back}?proof_error=not_image", status_code=303)
+
+    try:
+        verdict, model = judge(jpeg, challenge["title"], challenge["criteria"], challenge["proof_code"])
+        save_verdict(evidence["id"], verdict, model)
+    except Exception:
+        send_to_vote(evidence["id"])
+        return RedirectResponse(f"{back}?proof=sent_to_vote", status_code=303)
 
     return RedirectResponse(f"{back}?proof=uploaded", status_code=303)
