@@ -18,6 +18,10 @@ class ChallengeCreate(BaseModel):
     )
     join_deadline: datetime
     proof_deadline: datetime
+    verification_mode: Literal["ai", "vote"] = Field(
+        default="ai",
+        description="Verification mode: 'ai' (AI Arbiter) or 'vote' (Group vote only)",
+    )
 
     @field_validator("join_deadline", "proof_deadline")
     @classmethod
@@ -45,6 +49,10 @@ class ChallengeOut(BaseModel):
     status: str
     join_deadline: datetime
     proof_deadline: datetime
+    verification_mode: Literal["ai", "vote"] = Field(
+        default="ai",
+        description="Verification mode: 'ai' (AI Arbiter) or 'vote' (Group vote only)",
+    )
 
 class ChallengeJoinOut(BaseModel):
     payment_id: UUID
@@ -70,6 +78,10 @@ class ChallengeSummaryOut(BaseModel):
     pool_minor: int
     join_deadline: datetime
     proof_deadline: datetime
+    verification_mode: Literal["ai", "vote"] = Field(
+        default="ai",
+        description="Verification mode: 'ai' (AI Arbiter) or 'vote' (Group vote only)",
+    )
 
 
 class ChallengeDetailOut(ChallengeOut):

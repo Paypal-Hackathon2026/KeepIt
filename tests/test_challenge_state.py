@@ -123,7 +123,8 @@ def test_challenge_detail_page_has_htmx_trigger():
         ],
     }
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge):
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=[]):
         resp = client.get(f"/challenges/{challenge_id}")
         assert resp.status_code == 200
         html = resp.text

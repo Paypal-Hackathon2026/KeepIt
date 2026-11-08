@@ -7,6 +7,9 @@
 
 {% block content %}
 <form class="new-challenge-form" action="/challenges/new" method="POST">
+{% if errors.general %}
+  <p class="field-error">{{ errors.general }}</p>
+{% endif %}
 <div class="form_cell">
   <label for="title">Title:</label>
   <input type="text" id="title" name="title"
@@ -44,6 +47,20 @@
     value="{{values.proof_deadline if values.proof_deadline is defined else ''}}">
     {% if errors.proof_deadline %}
     <p class="field-error">{{ errors.proof_deadline }}</p>
+    {% endif %}
+</div>
+<div class="form_cell">
+    <label for="verification_mode">Verification Mode:</label>
+    <select id="verification_mode" name="verification_mode">
+      <option value="ai" {% if values.verification_mode != 'vote' %}selected{% endif %}>
+        AI Arbiter (Default - automated check)
+      </option>
+      <option value="vote" {% if values.verification_mode == 'vote' %}selected{% endif %}>
+        Group vote only (Participants vote)
+      </option>
+    </select>
+    {% if errors.verification_mode %}
+      <p class="field-error">{{ errors.verification_mode }}</p>
     {% endif %}
 </div>
   <button type="submit">Create</button>

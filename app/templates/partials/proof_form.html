@@ -5,12 +5,22 @@
       id="proof-form">
   <h2 class="section-heading">Upload your proof</h2>
 
-  {% if proof_result == "auto_approved" %}
-    <p class="field-success">Your proof was approved!</p>
-  {% elif proof_result == "needs_vote" %}
-    <p class="field-error">The AI Arbiter wasn't sure, so your photo goes to a group vote.</p>
+  {% if proof_result == "auto_approved" or proof_status == "auto_approved" %}
+    {% if challenge.verification_mode == "vote" %}
+      <p class="field-success">Proof auto-approved! You are currently the only participant.</p>
+    {% else %}
+      <p class="field-success">Your proof was approved!</p>
+    {% endif %}
+  {% elif proof_result == "needs_vote" or proof_status == "needs_vote" %}
+    {% if challenge.verification_mode == "vote" %}
+      <p class="field-success">Photo uploaded! Waiting for other participants to vote.</p>
+    {% else %}
+      <p class="field-error">The AI Arbiter wasn't sure, so your photo goes to a group vote.</p>
+    {% endif %}
   {% elif proof_result == "rejected" %}
     <p class="field-error">Your proof was rejected. Try another photo.</p>
+  {% elif proof_uploaded %}
+    <p class="field-success">Photo uploaded!</p>
   {% endif %}
 
   {% if proof_sent_to_vote %}
@@ -22,6 +32,11 @@
 
   <p class="proof-hint">
     Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
+    {% if challenge.verification_mode == 'vote' %}
+      <span>Proof will be verified by participant votes.</span>
+    {% else %}
+      <span>Proof will be checked by AI Arbiter.</span>
+    {% endif %}
   </p>
 
   <label class="proof-drop">

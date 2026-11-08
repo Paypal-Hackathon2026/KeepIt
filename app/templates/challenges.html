@@ -18,9 +18,18 @@
       {% for challenge in challenges %}
         <a href="/challenges/{{ challenge.id }}" class="challenge-card">
           <div class="challenge-card-top">
-            <span class="status-badge status-{{ challenge.status }}">
-              {{ challenge.status | capitalize }}
-            </span>
+            <div class="card-badges">
+              <span class="status-badge status-{{ challenge.status }}">
+                {{ challenge.status | capitalize }}
+              </span>
+              <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
+                {% if challenge.verification_mode == 'vote' %}
+                  <i class="fa-solid fa-users"></i> Vote
+                {% else %}
+                  <i class="fa-solid fa-robot"></i> AI
+                {% endif %}
+              </span>
+            </div>
             <span class="challenge-fee">
               Entry: {{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN
             </span>

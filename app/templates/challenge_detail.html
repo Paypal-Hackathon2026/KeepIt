@@ -12,9 +12,18 @@
 
   <section class="detail-card">
     <div class="detail-top">
-      <span class="status-badge status-{{ challenge.status }}">
-        {{ challenge.status | capitalize }}
-      </span>
+      <div class="detail-badges">
+        <span class="status-badge status-{{ challenge.status }}">
+          {{ challenge.status | capitalize }}
+        </span>
+        <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
+          {% if challenge.verification_mode == 'vote' %}
+            <i class="fa-solid fa-users"></i> Group Vote
+          {% else %}
+            <i class="fa-solid fa-robot"></i> AI Arbiter
+          {% endif %}
+        </span>
+      </div>
       <button type="button" class="btn-secondary" id="copy-invite-btn" onclick="copyInviteLink()">
         Copy invite link
       </button>
@@ -47,6 +56,16 @@
       <div class="meta-box">
         <span class="meta-label">Proof Deadline</span>
         <span class="meta-value">{{ challenge.proof_deadline_fmt }}</span>
+      </div>
+      <div class="meta-box">
+        <span class="meta-label">Verification Mode</span>
+        <span class="meta-value">
+          {% if challenge.verification_mode == 'vote' %}
+            Group vote only
+          {% else %}
+            AI Arbiter
+          {% endif %}
+        </span>
       </div>
     </div>
 
