@@ -18,10 +18,12 @@ create table if not exists challenges (
   entry_fee_minor integer not null check (entry_fee_minor > 0),
   proof_code text not null,
   status text not null default 'open'
-    check (status in ('open', 'active', 'settling', 'settled', 'cancelled')),
+    check (status in ('open', 'active', 'voting', 'closed', 'settling', 'settled', 'cancelled')),
   join_deadline timestamptz not null,
   proof_deadline timestamptz not null,
+  voting_deadline timestamptz not null,
   check (proof_deadline > join_deadline),
+  check (voting_deadline > proof_deadline),
   verification_mode text not null default 'ai'
     check (verification_mode in ('ai', 'vote'))
 );

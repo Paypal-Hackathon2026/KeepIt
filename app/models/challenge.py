@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from uuid import UUID
 from typing import Literal
@@ -18,14 +18,17 @@ class ChallengeCreate(BaseModel):
     )
     join_deadline: datetime
     proof_deadline: datetime
+    voting_deadline: datetime | None = None
     verification_mode: Literal["ai", "vote"] = Field(
         default="ai",
         description="Verification mode: 'ai' (AI Arbiter) or 'vote' (Group vote only)",
     )
 
-    @field_validator("join_deadline", "proof_deadline")
+    @field_validator("join_deadline", "proof_deadline", "voting_deadline")
     @classmethod
-    def must_be_in_future(cls, v: datetime) -> datetime:
+    def must_be_in_future(cls, v: datetime | None) -> datetime | None:
+        if v is None:
+            return v
         if v.tzinfo is None:
             v = v.replace(tzinfo=timezone.utc)
         if v <= datetime.now(timezone.utc):
@@ -33,9 +36,13 @@ class ChallengeCreate(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def proof_after_join(self) -> "ChallengeCreate":
+    def validate_deadlines(self) -> "ChallengeCreate":
         if self.proof_deadline <= self.join_deadline:
             raise ValueError("proof_deadline must be later than join_deadline")
+        if self.voting_deadline is None:
+            self.voting_deadline = self.proof_deadline + timedelta(days=1)
+        elif self.voting_deadline <= self.proof_deadline:
+            raise ValueError("voting_deadline must be later than proof_deadline")
         return self
 
 
@@ -49,6 +56,7 @@ class ChallengeOut(BaseModel):
     status: str
     join_deadline: datetime
     proof_deadline: datetime
+    voting_deadline: datetime | None = None
     verification_mode: Literal["ai", "vote"] = Field(
         default="ai",
         description="Verification mode: 'ai' (AI Arbiter) or 'vote' (Group vote only)",
@@ -78,6 +86,7 @@ class ChallengeSummaryOut(BaseModel):
     pool_minor: int
     join_deadline: datetime
     proof_deadline: datetime
+    voting_deadline: datetime | None = None
     verification_mode: Literal["ai", "vote"] = Field(
         default="ai",
         description="Verification mode: 'ai' (AI Arbiter) or 'vote' (Group vote only)",

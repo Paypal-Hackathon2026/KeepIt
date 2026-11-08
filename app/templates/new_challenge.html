@@ -49,6 +49,14 @@
     <p class="field-error">{{ errors.proof_deadline }}</p>
     {% endif %}
 </div>
+<div class="form_cell_date">
+    <label for="voting_deadline">Voting Deadline (Optional - defaults to 1 day after proof deadline):</label>
+    <input type="datetime-local" id="voting_deadline" name="voting_deadline" 
+    value="{{values.voting_deadline if values.voting_deadline is defined else ''}}">
+    {% if errors.voting_deadline %}
+    <p class="field-error">{{ errors.voting_deadline }}</p>
+    {% endif %}
+</div>
 <div class="form_cell">
     <label for="verification_mode">Verification Mode:</label>
     <select id="verification_mode" name="verification_mode">

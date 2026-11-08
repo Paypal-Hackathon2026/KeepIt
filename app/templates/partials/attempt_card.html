@@ -1,6 +1,10 @@
 <div class="verdict-card">
   {% if a.photo_url %}
-    <img class="verdict-photo" src="{{ a.photo_url }}" alt="Proof photo, attempt {{ a.attempt }}">
+    <img class="verdict-photo vote-photo-clickable"
+         src="{{ a.photo_url }}"
+         alt="Proof photo, attempt {{ a.attempt }}"
+         onclick="openImageModal(this.src, 'Attempt {{ a.attempt }} of {{ max_attempts }}')"
+         title="Click to enlarge photo">
   {% endif %}
   <div class="verdict-content">
     <p class="verdict-title">AI Arbiter's opinion</p>

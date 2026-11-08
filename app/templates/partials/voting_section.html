@@ -1,0 +1,63 @@
+{% if pending_votes %}
+  <div class="voting-section" id="voting-section">
+    <h2 class="section-heading">
+      <i class="fa-solid fa-check-to-slot"></i> Community Voting ({{ pending_votes | length }})
+    </h2>
+    <div class="voting-cards">
+      {% for ev in pending_votes %}
+        <div class="vote-card" id="vote-card-{{ ev.id }}">
+          {% if ev.photo_url %}
+            <img class="vote-photo" src="{{ ev.photo_url }}" alt="Proof by {{ ev.author_name }}">
+          {% endif %}
+          <div class="vote-content">
+            <div class="vote-header">
+              <span class="vote-author">{{ ev.author_name }}</span>
+              <span class="vote-attempt">Attempt {{ ev.attempt }} of {{ max_attempts }}</span>
+            </div>
+
+            <p class="vote-prompt">Does this proof meet the challenge criteria?</p>
+
+            <div class="vote-stats">
+              <span class="vote-stat-yes"><i class="fa-solid fa-thumbs-up"></i> {{ ev.yes_count }}</span>
+              <span class="vote-stat-no"><i class="fa-solid fa-thumbs-down"></i> {{ ev.no_count }}</span>
+              <span class="text-muted">({{ ev.total_votes }} total)</span>
+            </div>
+
+            {% if ev.my_vote is not none %}
+              <div class="my-vote-status">
+                <span>Your vote:</span>
+                {% if ev.my_vote %}
+                  <span class="badge-voted-yes"><i class="fa-solid fa-check"></i> Approved</span>
+                {% else %}
+                  <span class="badge-voted-no"><i class="fa-solid fa-xmark"></i> Rejected</span>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            {% if challenge.status not in ['closed', 'settling', 'settled', 'cancelled'] %}
+              <div class="vote-actions">
+                <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-form">
+                  <input type="hidden" name="approve" value="true">
+                  <button type="submit" class="btn-vote btn-vote-approve {% if ev.my_vote is true %}active{% endif %}" title="Vote to approve this proof">
+                    <i class="fa-solid fa-thumbs-up"></i> Approve
+                  </button>
+                </form>
+
+                <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-form">
+                  <input type="hidden" name="approve" value="false">
+                  <button type="submit" class="btn-vote btn-vote-reject {% if ev.my_vote is false %}active{% endif %}" title="Vote to reject this proof">
+                    <i class="fa-solid fa-thumbs-down"></i> Reject
+                  </button>
+                </form>
+              </div>
+            {% else %}
+              <div class="vote-actions">
+                <span class="text-muted"><i class="fa-solid fa-lock"></i> Voting has concluded.</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
