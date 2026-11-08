@@ -15,7 +15,7 @@ def count_attempts(challenge_id: str, user_id: str) -> int:
     return len(result.data)
 
 
-def save_evidence(challenge_id: str, user_id: str, photo: bytes) -> dict:
+def save_evidence(challenge_id: str, user_id: str, photo: bytes, status: str = "pending") -> dict:
     attempt = count_attempts(challenge_id, user_id) + 1
     if attempt > MAX_ATTEMPTS:
         raise ValueError("You have already used all 3 attempts.")
@@ -24,7 +24,7 @@ def save_evidence(challenge_id: str, user_id: str, photo: bytes) -> dict:
     path = f"{challenge_id}/{user_id}/{attempt}.jpg"
     
     supabase.storage.from_(BUCKET).upload(
-    path, jpeg, {"content-type": "image/jpeg", "upsert": "true"}
+        path, jpeg, {"content-type": "image/jpeg", "upsert": "true"}
     )
 
     result = (
@@ -34,6 +34,7 @@ def save_evidence(challenge_id: str, user_id: str, photo: bytes) -> dict:
             "user_id": user_id,
             "attempt": attempt,
             "storage_path": path,
+            "status": status,
         })
         .execute()
     )

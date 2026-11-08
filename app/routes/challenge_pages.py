@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from PIL import Image, UnidentifiedImageError
 
 from app.deps import current_user
+from app.db import supabase
 from app.models.challenge import ChallengeCreate
 from app.services.challenge_service import (
     create_challenge,
@@ -29,7 +30,7 @@ router = APIRouter()
 @router.get("/challenges/new")
 def new_challenge_page(request: Request, user: dict = Depends(current_user)):
     return templates.TemplateResponse(request, "new_challenge.html",
-                                       {"user": user, "errors": {}, "values": {}})
+                                       {"user": user, "errors": {}, "values": {"verification_mode": "ai"}})
 @router.post("/challenges/new")
 def created_challenge(request: Request,
                       title: str = Form(""),
@@ -37,17 +38,26 @@ def created_challenge(request: Request,
                       entry_fee_pln: str = Form(""),
                       join_deadline: str = Form(""),
                       proof_deadline: str = Form(""),
+                      verification_mode: str = Form("ai"),
                       user: dict = Depends(current_user)):
     values = {
         "title": title,
         "criteria": criteria,
         "entry_fee_pln": entry_fee_pln,
         "join_deadline": join_deadline,
-        "proof_deadline": proof_deadline
+        "proof_deadline": proof_deadline,
+        "verification_mode": verification_mode,
     }
 
     try:
-        challenge_data = ChallengeCreate(title=title, criteria=criteria, entry_fee_pln=entry_fee_pln, join_deadline=join_deadline, proof_deadline=proof_deadline)
+        challenge_data = ChallengeCreate(
+            title=title,
+            criteria=criteria,
+            entry_fee_pln=entry_fee_pln,
+            join_deadline=join_deadline,
+            proof_deadline=proof_deadline,
+            verification_mode=verification_mode,
+        )
     except ValidationError as e:
         errors={}
         for error in e.errors():
@@ -63,7 +73,15 @@ def created_challenge(request: Request,
         return templates.TemplateResponse(request, "new_challenge.html",
                                              {"user": user, "errors": errors, "values": values},
                                              status_code=422,)
-    new_challenge = create_challenge(challenge_data,creator_id=user["id"])
+    try:
+        new_challenge = create_challenge(challenge_data, creator_id=user["id"])
+    except HTTPException as e:
+        return templates.TemplateResponse(
+            request,
+            "new_challenge.html",
+            {"user": user, "errors": {"general": e.detail}, "values": values},
+            status_code=500,
+        )
     return RedirectResponse(url=f"/challenges/{new_challenge['id']}", status_code=303)
     
 
@@ -136,7 +154,8 @@ def challenge_detail_page(
             "has_paid": has_paid,
             "is_participant": my_participant is not None,
             "proof_error": PROOF_ERRORS.get(proof_error),
-            "proof_uploaded": proof == "uploaded",
+            "proof_uploaded": proof in ("uploaded", "needs_vote", "auto_approved"),
+            "proof_status": proof,
         },
     )
 
@@ -230,11 +249,28 @@ def upload_evidence(
     if len(data) > MAX_UPLOAD_BYTES:
         return RedirectResponse(f"{back}?proof_error=too_big", status_code=303)
 
+    verification_mode = challenge.get("verification_mode", "ai")
+    paid_participants = [p for p in challenge.get("participants", []) if p.get("paid")]
+
+    if verification_mode == "vote":
+        if len(paid_participants) <= 1:
+            initial_status = "auto_approved"
+            proof_param = "proof=auto_approved"
+        else:
+            initial_status = "needs_vote"
+            proof_param = "proof=needs_vote"
+    else:
+        initial_status = "pending"
+        proof_param = "proof=uploaded"
+
     try:
-        save_evidence(str(challenge_id), str(user["id"]), data)
+        save_evidence(str(challenge_id), str(user["id"]), data, status=initial_status)
     except ValueError:
         return RedirectResponse(f"{back}?proof_error=no_attempts", status_code=303)
     except (UnidentifiedImageError, Image.DecompressionBombError):
         return RedirectResponse(f"{back}?proof_error=not_image", status_code=303)
 
-    return RedirectResponse(f"{back}?proof=uploaded", status_code=303)
+    if initial_status == "auto_approved":
+        supabase.table("participants").update({"outcome": "verified"}).eq("challenge_id", str(challenge_id)).eq("user_id", str(user["id"])).execute()
+
+    return RedirectResponse(f"{back}?{proof_param}", status_code=303)

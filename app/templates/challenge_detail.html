@@ -12,9 +12,18 @@
 
   <section class="detail-card">
     <div class="detail-top">
-      <span class="status-badge status-{{ challenge.status }}">
-        {{ challenge.status | capitalize }}
-      </span>
+      <div class="detail-badges">
+        <span class="status-badge status-{{ challenge.status }}">
+          {{ challenge.status | capitalize }}
+        </span>
+        <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
+          {% if challenge.verification_mode == 'vote' %}
+            <i class="fa-solid fa-users"></i> Group Vote
+          {% else %}
+            <i class="fa-solid fa-robot"></i> AI Arbiter
+          {% endif %}
+        </span>
+      </div>
       <button type="button" class="btn-secondary" id="copy-invite-btn" onclick="copyInviteLink()">
         Copy invite link
       </button>
@@ -48,6 +57,16 @@
         <span class="meta-label">Proof Deadline</span>
         <span class="meta-value">{{ challenge.proof_deadline_fmt }}</span>
       </div>
+      <div class="meta-box">
+        <span class="meta-label">Verification Mode</span>
+        <span class="meta-value">
+          {% if challenge.verification_mode == 'vote' %}
+            Group vote only
+          {% else %}
+            AI Arbiter
+          {% endif %}
+        </span>
+      </div>
     </div>
 
     {% if not has_paid and challenge.status == 'open' %}
@@ -66,7 +85,13 @@
         <h2 class="section-heading">Upload your proof</h2>
 
         {% if proof_uploaded %}
-          <p class="field-success">Photo uploaded!</p>
+          {% if proof_status == 'auto_approved' %}
+            <p class="field-success">Proof auto-approved! You are currently the only participant.</p>
+          {% elif proof_status == 'needs_vote' %}
+            <p class="field-success">Photo uploaded! Waiting for other participants to vote.</p>
+          {% else %}
+            <p class="field-success">Photo uploaded!</p>
+          {% endif %}
         {% endif %}
         {% if proof_error %}
           <p class="field-error">{{ proof_error }}</p>
@@ -74,6 +99,11 @@
 
         <p class="proof-hint">
           Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
+          {% if challenge.verification_mode == 'vote' %}
+            <span>Proof will be verified by participant votes.</span>
+          {% else %}
+            <span>Proof will be checked by AI Arbiter.</span>
+          {% endif %}
         </p>
 
         <label class="proof-drop">
