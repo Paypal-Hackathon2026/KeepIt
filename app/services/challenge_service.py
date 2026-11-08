@@ -1,3 +1,4 @@
+import logging
 import secrets
 import string
 from decimal import Decimal
@@ -7,6 +8,8 @@ from uuid import UUID
 
 from app.models.challenge import ChallengeCreate
 from app.db import supabase
+
+logger = logging.getLogger(__name__)
 
 PROOF_CODE_LENGTH = 8
 PROOF_CODE_ALPHABET = string.ascii_uppercase + string.digits
@@ -45,20 +48,29 @@ def create_challenge(payload: ChallengeCreate, creator_id: str) -> dict:
 
     Returns the created challenge row.
     """
-    result = supabase.rpc(
-        "create_challenge_with_participant",
-        {
-            "p_creator_id": creator_id,
-            "p_title": payload.title,
-            "p_criteria": payload.criteria,
-            "p_entry_fee_minor": _pln_to_minor(payload.entry_fee_pln),
-            "p_proof_code": _generate_proof_code(),
-            "p_join_deadline": payload.join_deadline.isoformat(),
-            "p_proof_deadline": payload.proof_deadline.isoformat(),
-        },
-    ).execute()
+    try:
+        result = supabase.rpc(
+            "create_challenge_with_participant",
+            {
+                "p_creator_id": creator_id,
+                "p_title": payload.title,
+                "p_criteria": payload.criteria,
+                "p_entry_fee_minor": _pln_to_minor(payload.entry_fee_pln),
+                "p_proof_code": _generate_proof_code(),
+                "p_join_deadline": payload.join_deadline.isoformat(),
+                "p_proof_deadline": payload.proof_deadline.isoformat(),
+                "p_verification_mode": payload.verification_mode,
+            },
+        ).execute()
+    except Exception as exc:
+        logger.exception("Failed to execute create_challenge_with_participant RPC: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error creating challenge: {exc}",
+        ) from exc
 
     if not result.data:
+        logger.error("create_challenge_with_participant returned empty data")
         raise HTTPException(
             status_code=500,
             detail="Failed to create challenge in database",

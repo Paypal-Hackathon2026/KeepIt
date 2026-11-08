@@ -21,7 +21,9 @@ create table if not exists challenges (
     check (status in ('open', 'active', 'settling', 'settled', 'cancelled')),
   join_deadline timestamptz not null,
   proof_deadline timestamptz not null,
-  check (proof_deadline > join_deadline)
+  check (proof_deadline > join_deadline),
+  verification_mode text not null default 'ai'
+    check (verification_mode in ('ai', 'vote'))
 );
 
 alter table challenges enable row level security;

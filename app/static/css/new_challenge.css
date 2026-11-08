@@ -42,7 +42,8 @@
 .new-challenge-form input[type="text"],
 .new-challenge-form input[type="number"],
 .new-challenge-form input[type="datetime-local"],
-.new-challenge-form textarea {
+.new-challenge-form textarea,
+.new-challenge-form select {
   width: 100%;
   box-sizing: border-box;
   font-family: var(--font-body);
@@ -61,7 +62,8 @@
 }
 
 .new-challenge-form input:focus,
-.new-challenge-form textarea:focus {
+.new-challenge-form textarea:focus,
+.new-challenge-form select:focus {
   outline: none;
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(43, 68, 207, 0.15);

@@ -12,9 +12,18 @@
 
   <section class="detail-card">
     <div class="detail-top">
-      <span class="status-badge status-{{ challenge.status }}">
-        {{ challenge.status | capitalize }}
-      </span>
+      <div class="detail-badges">
+        <span class="status-badge status-{{ challenge.status }}">
+          {{ challenge.status | capitalize }}
+        </span>
+        <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
+          {% if challenge.verification_mode == 'vote' %}
+            <i class="fa-solid fa-users"></i> Group Vote
+          {% else %}
+            <i class="fa-solid fa-robot"></i> AI Arbiter
+          {% endif %}
+        </span>
+      </div>
       <button type="button" class="btn-secondary" id="copy-invite-btn" onclick="copyInviteLink()">
         Copy invite link
       </button>
@@ -48,6 +57,16 @@
         <span class="meta-label">Proof Deadline</span>
         <span class="meta-value">{{ challenge.proof_deadline_fmt }}</span>
       </div>
+      <div class="meta-box">
+        <span class="meta-label">Verification Mode</span>
+        <span class="meta-value">
+          {% if challenge.verification_mode == 'vote' %}
+            Group vote only
+          {% else %}
+            AI Arbiter
+          {% endif %}
+        </span>
+      </div>
     </div>
 
     {% if not has_paid and challenge.status == 'open' %}
@@ -59,40 +78,14 @@
     {% endif %}
 
     {% if has_paid %}
-      <form method="post"
-            action="/challenges/{{ challenge.id }}/evidence"
-            enctype="multipart/form-data"
-            class="proof-form">
-        <h2 class="section-heading">Upload your proof</h2>
-
-        {% if proof_uploaded %}
-          <p class="field-success">Photo uploaded!</p>
-        {% endif %}
-        {% if proof_error %}
-          <p class="field-error">{{ proof_error }}</p>
-        {% endif %}
-
-        <p class="proof-hint">
-          Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
-        </p>
-
-        <label class="proof-drop">
-          <input type="file" name="photo" accept="image/*" capture="environment"
-                 required class="proof-input">
-
-          <span class="proof-state proof-state-empty">
-            <span class="proof-drop-icon"><i class="fa-solid fa-camera"></i></span>
-            <span class="proof-drop-text">Tap to choose a photo</span>
-          </span>
-
-          <span class="proof-state proof-state-ready">
-            <span class="proof-drop-icon"><i class="fa-solid fa-circle-check"></i></span>
-            <span class="proof-drop-text">Click to change the photo</span>
-          </span>
-        </label>
-
-        <button type="submit" class="btn-primary btn-full">Upload proof</button>
-      </form>
+      {% if my_outcome == "verified" %}
+        <p class="field-success">You completed this challenge!</p>
+      {% elif my_outcome == "forfeited" %}
+        <p class="field-error">You used all your attempts for this challenge.</p>
+      {% else %}
+        {% include "partials/proof_form.html" %}
+      {% endif %}
+      {% include "partials/attempts.html" %}
     {% endif %}
 
   </section>
@@ -119,6 +112,13 @@ document.getElementById("pay-form")?.addEventListener("submit", () => {
   const btn = document.getElementById("pay-btn");
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to PayPal…';
+});
+
+document.getElementById("proof-form")?.addEventListener("submit", () => {
+  const btn = document.getElementById("proof-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> The AI Arbiter is checking your photo…';
+  document.getElementById("proof-progress").hidden = false;
 });
 
 window.addEventListener("pageshow", (e) => {

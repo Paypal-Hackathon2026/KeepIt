@@ -1,0 +1,8 @@
+{% if attempts %}
+  <div class="attempts-section">
+    <h2 class="section-heading">Your attempts</h2>
+    {% for a in attempts %}
+      {% include "partials/attempt_card.html" %}
+    {% endfor %}
+  </div>
+{% endif %}
