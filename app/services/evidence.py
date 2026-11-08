@@ -46,7 +46,7 @@ def send_to_vote(evidence_id: str) -> None:
 def get_my_evidence(challenge_id: str, user_id: str) -> list[dict]:
     result = (
         supabase.table("evidence")
-        .select("attempt, storage_path, verdicts(verified, confidence, reasoning, fraud_flags)")
+        .select("attempt, status, storage_path, verdicts(verified, confidence, reasoning, fraud_flags)")
         .eq("challenge_id", challenge_id)
         .eq("user_id", user_id)
         .order("attempt", desc=True)
@@ -65,3 +65,26 @@ def get_my_evidence(challenge_id: str, user_id: str) -> list[dict]:
         row["verdict"] = row["verdicts"][0] if row["verdicts"] else None
 
     return attempts
+
+def set_status(evidence_id: str, status: str) -> None:
+    supabase.table("evidence").update({"status": status}).eq("id", evidence_id).execute()
+    
+def mark_verified(challenge_id: str, user_id: str) -> None:
+    (
+        supabase.table("participants")
+        .update({"outcome": "verified"})
+        .eq("challenge_id", challenge_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    
+def mark_forfeited(challenge_id: str, user_id: str) -> None:
+    (
+        supabase.table("participants")
+        .update({"outcome": "forfeited"})
+        .eq("challenge_id", challenge_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    
+    

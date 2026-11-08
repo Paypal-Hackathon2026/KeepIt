@@ -20,14 +20,18 @@ from app.services.evidence import (
     get_my_evidence,
     save_evidence,
     send_to_vote,
+    set_status,
+    mark_verified,
+    mark_forfeited
 )
-from app.services.arbiter import judge, save_verdict
+from app.services.arbiter import judge, save_verdict, decide
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 PROOF_ERRORS = {
     "too_big": "Photo is too big (max 15 MB).",
     "not_image": "This file is not a photo. Try again.",
     "no_attempts": "You have used all 3 attempts.",
+    "closed": "You can't upload more photos for this challenge.",
 }
 
 router = APIRouter()
@@ -142,8 +146,9 @@ def challenge_detail_page(
             "challenge": challenge,
             "has_paid": has_paid,
             "is_participant": my_participant is not None,
+            "my_outcome": my_participant.get("outcome") if my_participant else None,
             "proof_error": PROOF_ERRORS.get(proof_error),
-            "proof_uploaded": proof == "uploaded",
+            "proof_result": proof,
             "proof_sent_to_vote": proof == "sent_to_vote",
             "attempts": attempts,
             "max_attempts": MAX_ATTEMPTS,
@@ -215,7 +220,7 @@ def payment_already_completed(
             "user": user,
             "challenge_id": challenge_id,
         })
-    
+
 @router.post("/challenges/{challenge_id}/evidence")
 def upload_evidence(
     challenge_id: UUID,
@@ -236,6 +241,9 @@ def upload_evidence(
     if not me or not me.get("paid"):
         raise HTTPException(status_code=403, detail="Only paid participants can upload proof")
 
+    if me.get("outcome") != "pending":
+        return RedirectResponse(f"{back}?proof_error=closed", status_code=303)
+
     data = photo.file.read(MAX_UPLOAD_BYTES + 1)
     if len(data) > MAX_UPLOAD_BYTES:
         return RedirectResponse(f"{back}?proof_error=too_big", status_code=303)
@@ -250,8 +258,14 @@ def upload_evidence(
     try:
         verdict, model = judge(jpeg, challenge["title"], challenge["criteria"], challenge["proof_code"])
         save_verdict(evidence["id"], verdict, model)
+        status = decide(verdict)
+        set_status(evidence["id"], status)
+        if status == "auto_approved":
+            mark_verified(str(challenge_id), str(user["id"]))
+        elif status == "rejected" and evidence["attempt"] == MAX_ATTEMPTS:
+            mark_forfeited(str(challenge_id), str(user["id"]))
     except Exception:
         send_to_vote(evidence["id"])
         return RedirectResponse(f"{back}?proof=sent_to_vote", status_code=303)
 
-    return RedirectResponse(f"{back}?proof=uploaded", status_code=303)
+    return RedirectResponse(f"{back}?proof={status}", status_code=303)

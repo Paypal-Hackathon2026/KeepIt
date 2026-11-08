@@ -729,3 +729,7 @@
   flex-direction: column;
   gap: 14px;
 }
+
+.verdict-vote {
+  color: var(--orange-dark);
+}
