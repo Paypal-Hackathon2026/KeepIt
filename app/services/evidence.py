@@ -15,7 +15,7 @@ def count_attempts(challenge_id: str, user_id: str) -> int:
     return len(result.data)
 
 
-def save_evidence(challenge_id: str, user_id: str, photo: bytes, status: str = "pending") -> dict:
+def save_evidence(challenge_id: str, user_id: str, photo: bytes, status: str = "pending") -> tuple[dict, bytes]:
     attempt = count_attempts(challenge_id, user_id) + 1
     if attempt > MAX_ATTEMPTS:
         raise ValueError("You have already used all 3 attempts.")
@@ -38,7 +38,54 @@ def save_evidence(challenge_id: str, user_id: str, photo: bytes, status: str = "
         })
         .execute()
     )
-    return result.data[0]
+    return result.data[0], jpeg
 
 
+def send_to_vote(evidence_id: str) -> None:
+    supabase.table("evidence").update({"status": "needs_vote"}).eq("id", evidence_id).execute()
+
+def get_my_evidence(challenge_id: str, user_id: str) -> list[dict]:
+    result = (
+        supabase.table("evidence")
+        .select("attempt, status, storage_path, verdicts(verified, confidence, reasoning, fraud_flags)")
+        .eq("challenge_id", challenge_id)
+        .eq("user_id", user_id)
+        .order("attempt", desc=True)
+        .execute()
+    )
+
+    attempts = result.data or []
+    for row in attempts:
+        try:
+            signed_url = supabase.storage.from_(BUCKET).create_signed_url(
+                row["storage_path"], 3600
+            )
+            row["photo_url"] = signed_url.get("signedURL") or signed_url.get("signedUrl")
+        except Exception:
+            row["photo_url"] = None
+        row["verdict"] = row["verdicts"][0] if row["verdicts"] else None
+
+    return attempts
+
+def set_status(evidence_id: str, status: str) -> None:
+    supabase.table("evidence").update({"status": status}).eq("id", evidence_id).execute()
+    
+def mark_verified(challenge_id: str, user_id: str) -> None:
+    (
+        supabase.table("participants")
+        .update({"outcome": "verified"})
+        .eq("challenge_id", challenge_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    
+def mark_forfeited(challenge_id: str, user_id: str) -> None:
+    (
+        supabase.table("participants")
+        .update({"outcome": "forfeited"})
+        .eq("challenge_id", challenge_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    
     

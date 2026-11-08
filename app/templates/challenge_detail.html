@@ -78,51 +78,14 @@
     {% endif %}
 
     {% if has_paid %}
-      <form method="post"
-            action="/challenges/{{ challenge.id }}/evidence"
-            enctype="multipart/form-data"
-            class="proof-form">
-        <h2 class="section-heading">Upload your proof</h2>
-
-        {% if proof_uploaded %}
-          {% if proof_status == 'auto_approved' %}
-            <p class="field-success">Proof auto-approved! You are currently the only participant.</p>
-          {% elif proof_status == 'needs_vote' %}
-            <p class="field-success">Photo uploaded! Waiting for other participants to vote.</p>
-          {% else %}
-            <p class="field-success">Photo uploaded!</p>
-          {% endif %}
-        {% endif %}
-        {% if proof_error %}
-          <p class="field-error">{{ proof_error }}</p>
-        {% endif %}
-
-        <p class="proof-hint">
-          Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
-          {% if challenge.verification_mode == 'vote' %}
-            <span>Proof will be verified by participant votes.</span>
-          {% else %}
-            <span>Proof will be checked by AI Arbiter.</span>
-          {% endif %}
-        </p>
-
-        <label class="proof-drop">
-          <input type="file" name="photo" accept="image/*" capture="environment"
-                 required class="proof-input">
-
-          <span class="proof-state proof-state-empty">
-            <span class="proof-drop-icon"><i class="fa-solid fa-camera"></i></span>
-            <span class="proof-drop-text">Tap to choose a photo</span>
-          </span>
-
-          <span class="proof-state proof-state-ready">
-            <span class="proof-drop-icon"><i class="fa-solid fa-circle-check"></i></span>
-            <span class="proof-drop-text">Click to change the photo</span>
-          </span>
-        </label>
-
-        <button type="submit" class="btn-primary btn-full">Upload proof</button>
-      </form>
+      {% if my_outcome == "verified" %}
+        <p class="field-success">You completed this challenge!</p>
+      {% elif my_outcome == "forfeited" %}
+        <p class="field-error">You used all your attempts for this challenge.</p>
+      {% else %}
+        {% include "partials/proof_form.html" %}
+      {% endif %}
+      {% include "partials/attempts.html" %}
     {% endif %}
 
   </section>
@@ -149,6 +112,13 @@ document.getElementById("pay-form")?.addEventListener("submit", () => {
   const btn = document.getElementById("pay-btn");
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to PayPal…';
+});
+
+document.getElementById("proof-form")?.addEventListener("submit", () => {
+  const btn = document.getElementById("proof-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> The AI Arbiter is checking your photo…';
+  document.getElementById("proof-progress").hidden = false;
 });
 
 window.addEventListener("pageshow", (e) => {

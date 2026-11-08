@@ -160,7 +160,8 @@ def test_challenge_detail_renders_verification_mode_badge():
         ],
     }
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_vote):
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_vote), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=[]):
         resp = client.get(f"/challenges/{challenge_id}")
         assert resp.status_code == 200
         html = resp.text
@@ -168,7 +169,8 @@ def test_challenge_detail_renders_verification_mode_badge():
         assert "mode-vote" in html
 
     mock_challenge_ai = dict(mock_challenge_vote, verification_mode="ai")
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_ai):
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_ai), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=[]):
         resp = client.get(f"/challenges/{challenge_id}")
         assert resp.status_code == 200
         html = resp.text
@@ -207,8 +209,8 @@ def test_upload_evidence_vote_mode_single_participant_auto_approve():
     fake_photo_bytes = buf.getvalue()
 
     with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.save_evidence") as mock_save_evidence, \
-         patch("app.routes.challenge_pages.supabase") as mock_supabase:
+         patch("app.routes.challenge_pages.save_evidence", return_value=({"id": str(uuid.uuid4()), "attempt": 1}, fake_photo_bytes)) as mock_save_evidence, \
+         patch("app.routes.challenge_pages.mark_verified") as mock_mark_verified:
 
         resp = client.post(
             f"/challenges/{challenge_id}/evidence",
@@ -224,9 +226,8 @@ def test_upload_evidence_vote_mode_single_participant_auto_approve():
         _, kwargs = mock_save_evidence.call_args
         assert kwargs.get("status") == "auto_approved"
 
-        # Verify participant outcome was updated to 'verified'
-        mock_supabase.table.assert_called_with("participants")
-        mock_supabase.table().update.assert_called_with({"outcome": "verified"})
+        # Verify participant was marked verified
+        mock_mark_verified.assert_called_once_with(str(challenge_id), str(MOCK_USER["id"]))
 
 
 def test_upload_evidence_vote_mode_multiple_participants_needs_vote():
@@ -266,7 +267,7 @@ def test_upload_evidence_vote_mode_multiple_participants_needs_vote():
     fake_photo_bytes = buf.getvalue()
 
     with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.save_evidence") as mock_save_evidence:
+         patch("app.routes.challenge_pages.save_evidence", return_value=({"id": str(uuid.uuid4()), "attempt": 1}, fake_photo_bytes)) as mock_save_evidence:
 
         resp = client.post(
             f"/challenges/{challenge_id}/evidence",
@@ -282,7 +283,7 @@ def test_upload_evidence_vote_mode_multiple_participants_needs_vote():
         assert kwargs.get("status") == "needs_vote"
 
 
-def test_upload_evidence_ai_mode_pending():
+def test_upload_evidence_ai_mode_calls_judge():
     challenge_id = uuid.uuid4()
     mock_challenge = {
         "id": challenge_id,
@@ -318,8 +319,22 @@ def test_upload_evidence_ai_mode_pending():
     img.save(buf, format="JPEG")
     fake_photo_bytes = buf.getvalue()
 
+    from app.services.arbiter import Verdict
+    mock_verdict = Verdict(
+        observations="Looks good",
+        verified=True,
+        confidence=0.9,
+        code_visible=True,
+        reasoning="All done",
+        fraud_flags=[],
+    )
+
     with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.save_evidence") as mock_save_evidence:
+         patch("app.routes.challenge_pages.save_evidence", return_value=({"id": str(uuid.uuid4()), "attempt": 1}, fake_photo_bytes)) as mock_save_evidence, \
+         patch("app.routes.challenge_pages.judge", return_value=(mock_verdict, "gemini-test")), \
+         patch("app.routes.challenge_pages.save_verdict"), \
+         patch("app.routes.challenge_pages.set_status"), \
+         patch("app.routes.challenge_pages.mark_verified") as mock_mark_verified:
 
         resp = client.post(
             f"/challenges/{challenge_id}/evidence",
@@ -328,9 +343,8 @@ def test_upload_evidence_ai_mode_pending():
         )
 
         assert resp.status_code == 303
-        assert resp.headers["location"] == f"/challenges/{challenge_id}?proof=uploaded"
+        assert resp.headers["location"] == f"/challenges/{challenge_id}?proof=auto_approved"
 
         mock_save_evidence.assert_called_once()
-        _, kwargs = mock_save_evidence.call_args
-        assert kwargs.get("status") == "pending"
+        mock_mark_verified.assert_called_once_with(str(challenge_id), str(MOCK_USER["id"]))
 
