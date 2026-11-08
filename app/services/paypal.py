@@ -167,3 +167,39 @@ def verify_webhook_signature(raw_body: bytes, headers: dict) -> bool:
     except Exception as exc:
         logger.warning("Error verifying PayPal webhook signature: %s", exc)
         return False
+def _format_amount_minor(amount_minor: int) -> str:
+    return f"{amount_minor//100}.{amount_minor%100:02d}"
+def create_paypal_batch(challenge_id: str, items: list[dict]) -> dict:
+    body={
+        "sender_batch_header":{
+            
+            "sender_batch_id": f"settle-{challenge_id}",
+            "email_subject": f"Payouts for Challenge from KeepIt",
+            "recipient_type": "EMAIL",
+
+        },
+        "items":[
+            {
+                "recipient_type": "EMAIL",
+                "receiver": item["email"],
+                "sender_item_id": item["payout_id"],
+                "amount":{
+                    "value": _format_amount_minor(item["amount_minor"]),
+                    "currency": "PLN"
+                },
+            
+            } for item in items
+            
+        ],
+    }
+    response=httpx.post(
+        f"{config.PAYPAL_API_BASE}/v1/payments/payouts",
+        headers={
+            "Authorization": f"Bearer {get_access_token()}",
+            "Content-Type": "application/json",
+        },
+        json=body,
+        timeout=20,
+    )
+    response.raise_for_status()
+    return response.json()
