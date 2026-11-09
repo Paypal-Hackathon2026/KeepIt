@@ -3,7 +3,6 @@ from supabase import create_client, ClientOptions
 
 from app import config
 
-# http2=False prevents Cloudflare/Supabase HTTP/2 keep-alive disconnects (httpx.RemoteProtocolError: Server disconnected)
 _http_client = httpx.Client(http2=False, timeout=30.0)
 _options = ClientOptions(httpx_client=_http_client)
 
