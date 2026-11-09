@@ -1034,6 +1034,87 @@ def test_ai_mode_voting_page_only_shows_needs_vote_photos():
         assert "bob_rejected.jpg" not in html
 
 
+def test_group_voting_mode_shows_approved_and_rejected_photos_on_voting_page():
+    """
+    In group vote only challenges (verification_mode == 'vote'), all submitted photos
+    must appear on the voting page timeline even after being approved or rejected by the community.
+    """
+    challenge_id = uuid.uuid4()
+    mock_challenge = {
+        "id": challenge_id,
+        "creator_id": MOCK_USER["id"],
+        "title": "Group Vote Challenge",
+        "criteria": "Submit daily code",
+        "verification_mode": "vote",
+        "status": "active",
+        "entry_fee_minor": 1000,
+        "pool_minor": 1000,
+        "participants": [
+            {"user_id": MOCK_USER["id"], "paid": True, "display_name": "Alice Tester"},
+            {"user_id": OTHER_USER_ID, "paid": True, "display_name": "Bob Submitter"},
+        ],
+    }
+
+    raw_feed_items = [
+        {
+            "id": str(uuid.uuid4()),
+            "challenge_id": str(challenge_id),
+            "user_id": OTHER_USER_ID,
+            "author_name": "Bob Submitter",
+            "is_me": False,
+            "attempt": 1,
+            "status": "approved",
+            "photo_url": "https://example.com/bob_approved.jpg",
+            "my_vote": True,
+            "yes_count": 2,
+            "no_count": 0,
+            "total_votes": 2,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "challenge_id": str(challenge_id),
+            "user_id": str(uuid.uuid4()),
+            "author_name": "Charlie Submitter",
+            "is_me": False,
+            "attempt": 1,
+            "status": "rejected",
+            "photo_url": "https://example.com/charlie_rejected.jpg",
+            "my_vote": False,
+            "yes_count": 0,
+            "no_count": 2,
+            "total_votes": 2,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "challenge_id": str(challenge_id),
+            "user_id": MOCK_USER["id"],
+            "author_name": "You",
+            "is_me": True,
+            "attempt": 1,
+            "status": "needs_vote",
+            "photo_url": "https://example.com/my_needs_vote.jpg",
+            "my_vote": None,
+            "yes_count": 0,
+            "no_count": 0,
+            "total_votes": 0,
+        },
+    ]
+
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.challenge_pages.get_voting_feed", return_value=raw_feed_items):
+
+        resp = client.get(f"/challenges/{challenge_id}/voting")
+        assert resp.status_code == 200
+        html = resp.text
+
+        # In vote mode, ALL photos (approved, rejected, needs_vote) must appear!
+        assert "bob_approved.jpg" in html
+        assert "charlie_rejected.jpg" in html
+        assert "my_needs_vote.jpg" in html
+        assert "Approved by community" in html
+        assert "Rejected by community" in html
+
+
 def test_group_voting_mode_does_not_render_ai_arbiter_opinion():
     """
     In group vote only challenges (verification_mode == 'vote'), attempt cards should not
@@ -1085,6 +1166,54 @@ def test_group_voting_mode_does_not_render_ai_arbiter_opinion():
         assert resp.status_code == 200
         assert "Needs voting" in resp.text
         assert ("AI Arbiter&#39;s opinion" in resp.text or "AI Arbiter's opinion" in resp.text)
+
+
+def test_get_voting_feed_mode_filtering():
+    """
+    Directly tests get_voting_feed:
+    - verification_mode == 'ai' filters out auto_approved and rejected items.
+    - verification_mode == 'vote' retains all items (approved, rejected, needs_vote).
+    """
+    from app.services.evidence import get_voting_feed
+
+    challenge_id = str(uuid.uuid4())
+    mock_supabase = MagicMock()
+
+    sample_data = [
+        {"id": "ev-1", "challenge_id": challenge_id, "user_id": "u1", "attempt": 1, "storage_path": "p1", "status": "approved"},
+        {"id": "ev-2", "challenge_id": challenge_id, "user_id": "u2", "attempt": 1, "storage_path": "p2", "status": "rejected"},
+        {"id": "ev-3", "challenge_id": challenge_id, "user_id": "u3", "attempt": 1, "storage_path": "p3", "status": "needs_vote"},
+    ]
+
+    # In vote mode: returns all 3
+    tbl_vote = MagicMock()
+    tbl_vote.select.return_value.eq.return_value.execute.return_value.data = sample_data
+    tbl_vote.select.return_value.in_.return_value.execute.return_value.data = []
+    mock_supabase.table.return_value = tbl_vote
+    mock_supabase.storage.from_().create_signed_url.return_value = {"signedUrl": "https://url.com"}
+
+    with patch("app.services.evidence.supabase", mock_supabase):
+        feed_vote = get_voting_feed(challenge_id, "u1", verification_mode="vote")
+        assert len(feed_vote) == 3
+        statuses = [item["status"] for item in feed_vote]
+        assert "approved" in statuses
+        assert "rejected" in statuses
+        assert "needs_vote" in statuses
+
+    # In AI mode: query filters with .eq("status", "needs_vote")
+    tbl_ai = MagicMock()
+    tbl_ai.select.return_value.eq.return_value.eq.return_value.execute.return_value.data = [
+        sample_data[2]  # only ev-3
+    ]
+    tbl_ai.select.return_value.in_.return_value.execute.return_value.data = []
+    mock_supabase.table.return_value = tbl_ai
+
+    with patch("app.services.evidence.supabase", mock_supabase):
+        feed_ai = get_voting_feed(challenge_id, "u1", verification_mode="ai")
+        assert len(feed_ai) == 1
+        assert feed_ai[0]["id"] == "ev-3"
+        assert feed_ai[0]["status"] == "needs_vote"
+
 
 
 
