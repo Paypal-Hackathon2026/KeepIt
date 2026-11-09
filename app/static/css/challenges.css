@@ -977,7 +977,6 @@
   }
 }
 
-/* Top Actions & Go To Voting Button */
 .detail-top-actions {
   display: flex;
   flex-direction: column;
@@ -1017,8 +1016,6 @@
   font-weight: 800;
   margin-left: 6px;
 }
-
-/* Voting Banner on Challenge Detail */
 .voting-banner {
   display: flex;
   flex-wrap: wrap;
@@ -1045,7 +1042,6 @@
   font-size: 14px;
 }
 
-/* Voting Subpage Specific */
 .voting-header-card {
   display: flex;
   flex-direction: column;
@@ -1136,8 +1132,6 @@
   opacity: 1;
   text-decoration: underline;
 }
-
-/* Lightbox Modal */
 .image-modal {
   display: none;
   position: fixed;
@@ -1217,9 +1211,6 @@
   text-align: center;
 }
 
-/* ==========================================================================
-   KeepIt Chronological Voting Feed (Left/Right Cards)
-   ========================================================================== */
 
 .page:has(.voting-page-container),
 .page.page-wide {
@@ -1300,7 +1291,6 @@
   width: 100%;
 }
 
-/* Other participants' photos on the LEFT */
 .vote-feed-row-other,
 .chat-msg-them {
   justify-content: flex-start;
@@ -1308,13 +1298,13 @@
   gap: 32px;
 }
 
-/* Current user's photos on the RIGHT */
+
 .vote-feed-row-me,
 .chat-msg-me {
   justify-content: flex-end;
 }
 
-/* Feed Vote Card */
+
 .feed-vote-card {
   width: 100%;
   max-width: 480px;
@@ -1394,7 +1384,7 @@
   color: var(--text-muted);
 }
 
-/* Photo Wrapper */
+
 .feed-photo-wrapper {
   position: relative;
   border-radius: 12px;
@@ -1415,7 +1405,7 @@
   display: block;
 }
 
-/* Card Footer */
+
 .feed-card-footer {
   display: flex;
   flex-direction: column;
@@ -1447,7 +1437,7 @@
   font-size: 14px;
 }
 
-/* Side Voting Buttons (Thumbs next to photo) */
+
 .vote-side-actions {
   display: flex;
   flex-direction: row;
@@ -1486,13 +1476,13 @@
   transform: scale(0.96);
 }
 
-/* Active (selected) state - enlarged and filled */
+
 .btn-side-vote.active {
   transform: scale(1.2);
   z-index: 2;
 }
 
-/* Inactive state (when user chose the other option) */
+
 .btn-side-vote.inactive {
   opacity: 0.45;
   transform: scale(0.9);
