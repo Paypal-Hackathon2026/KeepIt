@@ -13,8 +13,11 @@ from app.services.loops import check_challenges_ready_for_settlement,sync_challe
 async def lifespan(app: FastAPI):
     async def sync_settle_worker():
         while True:
-            await asyncio.to_thread(sync_challenge_statuses)
-            await asyncio.to_thread(check_challenges_ready_for_settlement)
+            try:
+                await asyncio.to_thread(sync_challenge_statuses)
+                await asyncio.to_thread(check_challenges_ready_for_settlement)
+            except Exception as exc:
+                print(f"Error in sync_settle_worker: {exc}")
             await asyncio.sleep(60)
 
     task = asyncio.create_task(sync_settle_worker())

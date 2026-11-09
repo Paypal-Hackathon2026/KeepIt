@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator, AnyHttpUrl
 
-
+from zoneinfo import ZoneInfo
 class ChallengeCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=200)
     criteria: str = Field(..., min_length=10)
@@ -29,7 +29,10 @@ class ChallengeCreate(BaseModel):
     def must_be_in_future(cls, v: datetime | None) -> datetime | None:
         if v is None:
             return v
-        v=v.astimezone(timezone.utc)
+        if v.tzinfo is not None:
+            v=v.astimezone(timezone.utc)
+        else:
+            v=v.replace(tzinfo=timezone.utc)
         if v <= datetime.now(timezone.utc):
             raise ValueError("Deadline must be in the future")
         return v

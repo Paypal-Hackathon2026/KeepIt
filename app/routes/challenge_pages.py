@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -43,8 +43,47 @@ PROOF_ERRORS = {
     "closed": "You can't upload more photos for this challenge.",
     "needs_vote": "Your photo has been sent to other participants for voting. You cannot upload more photos.",
 }
-
+from zoneinfo import ZoneInfo,ZoneInfoNotFoundError
 router = APIRouter()
+def _to_utc(
+    dt_local_str: str,
+    dt_utc_str: str = "",
+    tz_offset_str: str = "",
+    tz_name_str: str = "",
+) -> datetime | None:
+    if not dt_local_str and not dt_utc_str:
+        return None
+    if dt_utc_str and dt_utc_str.strip():
+        try:
+            return datetime.fromisoformat(dt_utc_str.strip().replace("Z", "+00:00")).astimezone(timezone.utc)
+        except Exception:
+            pass
+
+    if not dt_local_str or not dt_local_str.strip():
+        return None
+
+    try:
+        dt = datetime.fromisoformat(dt_local_str.strip().replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc)
+    if tz_offset_str and tz_offset_str.strip():
+        try:
+            offset_mins = int(tz_offset_str.strip())
+            tz = timezone(timedelta(minutes=-offset_mins))
+            return dt.replace(tzinfo=tz).astimezone(timezone.utc)
+        except Exception:
+            pass
+
+    if tz_name_str and tz_name_str.strip():
+        try:
+            tz = ZoneInfo(tz_name_str.strip())
+            return dt.replace(tzinfo=tz).astimezone(timezone.utc)
+        except Exception:
+            pass
+    return dt.replace(tzinfo=timezone.utc)
 
 @router.get("/challenges/new")
 def new_challenge_page(request: Request, user: dict = Depends(current_user)):
@@ -59,6 +98,11 @@ def created_challenge(request: Request,
                       proof_deadline: str = Form(""),
                       voting_deadline: str = Form(""),
                       verification_mode: str = Form("ai"),
+                      user_timezone: str = Form(""),
+                      tz_offset_minutes: str = Form(""),
+                      join_deadline_utc: str = Form(""),
+                      proof_deadline_utc: str = Form(""),
+                      voting_deadline_utc: str = Form(""),
                       user: dict = Depends(current_user)):
     values = {
         "title": title,
@@ -68,19 +112,23 @@ def created_challenge(request: Request,
         "proof_deadline": proof_deadline,
         "voting_deadline": voting_deadline,
         "verification_mode": verification_mode,
+        "user_timezone": user_timezone,
     }
 
     try:
+        parsed_join = _to_utc(join_deadline, join_deadline_utc, tz_offset_minutes, user_timezone) or join_deadline
+        parsed_proof = _to_utc(proof_deadline, proof_deadline_utc, tz_offset_minutes, user_timezone) or proof_deadline
+        parsed_voting = _to_utc(voting_deadline, voting_deadline_utc, tz_offset_minutes, user_timezone) if voting_deadline else None
         create_kwargs = {
             "title": title,
             "criteria": criteria,
             "entry_fee_pln": entry_fee_pln,
-            "join_deadline": join_deadline,
-            "proof_deadline": proof_deadline,
+            "join_deadline": parsed_join,
+            "proof_deadline": parsed_proof,
             "verification_mode": verification_mode,
         }
-        if voting_deadline:
-            create_kwargs["voting_deadline"] = voting_deadline
+        if parsed_voting:
+            create_kwargs["voting_deadline"] = parsed_voting
         challenge_data = ChallengeCreate(**create_kwargs)
     except ValidationError as e:
         errors={}

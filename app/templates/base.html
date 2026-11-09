@@ -13,7 +13,30 @@
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
-
+<script>
+  function formatLocalDeadlines() {
+    document.querySelectorAll('[data-utc]').forEach(function(el) {
+      var raw = el.getAttribute('data-utc');
+      if (!raw) return;
+      var clean = raw.trim().replace(' ', 'T');
+      if (!clean.endsWith('Z') && !clean.includes('+') && clean.indexOf('-', 10) === -1) {
+        clean += 'Z';
+      }
+      var d = new Date(clean);
+      if (!isNaN(d.getTime())) {
+        var pad = function(n) { return n < 10 ? '0' + n : n; };
+        var yr = d.getFullYear();
+        var mo = pad(d.getMonth() + 1);
+        var da = pad(d.getDate());
+        var hr = pad(d.getHours());
+        var mi = pad(d.getMinutes());
+        el.textContent = yr + '-' + mo + '-' + da + ' ' + hr + ':' + mi;
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', formatLocalDeadlines);
+  document.body.addEventListener('htmx:afterSwap', formatLocalDeadlines);
+</script>
   {% block body %}{% endblock %}
 
 </body>
