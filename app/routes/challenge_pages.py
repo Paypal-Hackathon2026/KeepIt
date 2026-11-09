@@ -1,6 +1,9 @@
+import logging
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, File, UploadFile
 from fastapi.responses import RedirectResponse
@@ -377,7 +380,8 @@ def upload_evidence(
             mark_verified(str(challenge_id), str(user["id"]))
         elif status in ("rejected", "auto_rejected") and evidence["attempt"] == max_attempts:
             mark_forfeited(str(challenge_id), str(user["id"]))
-    except Exception:
+    except Exception as exc:
+        logger.exception("AI Arbiter check failed for evidence %s: %s", evidence.get("id"), exc)
         send_to_vote(evidence["id"])
         return RedirectResponse(f"{back}?proof=sent_to_vote", status_code=303)
 
