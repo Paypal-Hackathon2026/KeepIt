@@ -218,6 +218,11 @@ def complete_payment(paypal_order_id: str, user_id: str) -> dict:
         raise HTTPException(status_code=409, detail="Payment was cancelled")
     if payment["status"] == "captured":
         return _mark_participant_paid(payment)
+    ch=supabase.table("challengess").select("status,join_deadline").eq("id", payment["challenge_id"]).single().execute().data
+    if ch:
+        join_dl=datetime.fromisoformat(ch["join_deadline"].replace("Z", "+00:00"))
+        if ch["status"]!="open" or join_dl<=datetime.now(timezone.utc):
+            raise HTTPException(status_code=409, detail="Challenge is not open for joining - cannot complete payment")
 
     capture_id = capture_order(paypal_order_id)["capture_id"]
     if not capture_id:
