@@ -157,9 +157,9 @@ def created_challenge(request: Request,
     return RedirectResponse(url=f"/challenges/{new_challenge['id']}", status_code=303)
     
 
-def _format_deadline(value) -> str:
+def _format_deadline(value, user_tz: str | None = None) -> str:
     """
-    Turn an ISO datetime string or datetime object into a readable string in local time.
+    Turn an ISO datetime string or datetime object into a readable string in the user's local time.
     """
     if not value:
         return ""
@@ -167,37 +167,48 @@ def _format_deadline(value) -> str:
         try:
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except Exception:
-            s=str(value).replace("T", " ")
+            s = str(value).replace("T", " ")
             return s[:16]
     if isinstance(value, datetime):
-        if value.tzinfo is not None:
-            value = value.astimezone()
-            return value.strftime("%Y-%m-%d %H:%M")
+        tz = None
+        if user_tz:
+            try:
+                tz = ZoneInfo(user_tz.strip())
+            except Exception:
+                tz = None
+        if tz is not None:
+            if value.tzinfo is not None:
+                value = value.astimezone(tz)
+            else:
+                value = value.replace(tzinfo=timezone.utc).astimezone(tz)
+        elif value.tzinfo is not None:
+            value = value.astimezone(timezone.utc)
+        return value.strftime("%Y-%m-%d %H:%M")
     s = str(value).replace("T", " ")
     return s[:16]
 
 
-def _prepare_challenge_view(challenge: dict) -> dict:
+def _prepare_challenge_view(challenge: dict, user_tz: str | None = None) -> dict:
     """
     Format deadline and participant timestamps for display.
     """
-    challenge["join_deadline_fmt"] = _format_deadline(challenge.get("join_deadline"))
-    challenge["proof_deadline_fmt"] = _format_deadline(challenge.get("proof_deadline"))
-    challenge["voting_deadline_fmt"] = _format_deadline(challenge.get("voting_deadline"))
+    challenge["join_deadline_fmt"] = _format_deadline(challenge.get("join_deadline"), user_tz)
+    challenge["proof_deadline_fmt"] = _format_deadline(challenge.get("proof_deadline"), user_tz)
+    challenge["voting_deadline_fmt"] = _format_deadline(challenge.get("voting_deadline"), user_tz)
     for p in challenge.get("participants", []):
-        p["joined_at_fmt"] = _format_deadline(p.get("joined_at"))
+        p["joined_at_fmt"] = _format_deadline(p.get("joined_at"), user_tz)
     return challenge
 
 
 @router.get("/challenges")
 def my_challenges_page(request: Request, user: Annotated[dict, Depends(current_user)]):
-    
+    user_tz = request.cookies.get("user_timezone")
     challenges = get_user_challenges(user_id=user["id"])
     
     for c in challenges:
-        c["join_deadline_fmt"] = _format_deadline(c.get("join_deadline"))
-        c["proof_deadline_fmt"] = _format_deadline(c.get("proof_deadline"))
-        c["voting_deadline_fmt"] = _format_deadline(c.get("voting_deadline"))
+        c["join_deadline_fmt"] = _format_deadline(c.get("join_deadline"), user_tz)
+        c["proof_deadline_fmt"] = _format_deadline(c.get("proof_deadline"), user_tz)
+        c["voting_deadline_fmt"] = _format_deadline(c.get("voting_deadline"), user_tz)
 
     return templates.TemplateResponse(
         request,
@@ -222,7 +233,8 @@ def challenge_detail_page(
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
 
-    _prepare_challenge_view(challenge)
+    user_tz = request.cookies.get("user_timezone")
+    _prepare_challenge_view(challenge, user_tz)
 
     participants = challenge.get("participants", [])
     my_participant = next(
@@ -232,7 +244,17 @@ def challenge_detail_page(
     has_paid = bool(my_participant and my_participant.get("paid"))
     attempts = get_my_evidence(str(challenge_id), str(user["id"])) if has_paid else []
     verification_mode = challenge.get("verification_mode", "ai")
-    voting_open = challenge.get("status") not in ("closed", "settling", "settled", "cancelled")
+    now = datetime.now(timezone.utc)
+    join_dl = challenge.get("join_deadline")
+    if isinstance(join_dl, str):
+        try:
+            join_dl = datetime.fromisoformat(join_dl.replace("Z", "+00:00"))
+        except Exception:
+            join_dl = None
+    if isinstance(join_dl, datetime) and join_dl.tzinfo is None:
+        join_dl = join_dl.replace(tzinfo=timezone.utc)
+    is_after_join = (not join_dl) or (now >= join_dl)
+    voting_open = is_after_join and challenge.get("status") in ("active", "voting")
     pending_votes = (
         get_pending_votes_for_user(
             str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode
@@ -291,7 +313,8 @@ def challenge_state_fragment(
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
 
-    _prepare_challenge_view(challenge)
+    user_tz = request.cookies.get("user_timezone")
+    _prepare_challenge_view(challenge, user_tz)
 
     return templates.TemplateResponse(
         request,
@@ -460,7 +483,8 @@ def voting_page(
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
 
-    _prepare_challenge_view(challenge)
+    user_tz = request.cookies.get("user_timezone")
+    _prepare_challenge_view(challenge, user_tz)
 
     participants = challenge.get("participants", [])
     my_participant = next(
@@ -472,7 +496,18 @@ def voting_page(
         raise HTTPException(status_code=403, detail="Only paid participants can access voting")
 
     verification_mode = challenge.get("verification_mode") or "ai"
-    voting_open = challenge.get("status") not in ("closed", "settling", "settled", "cancelled")
+    now = datetime.now(timezone.utc)
+    join_dl = challenge.get("join_deadline")
+    if isinstance(join_dl, str):
+        try:
+            join_dl = datetime.fromisoformat(join_dl.replace("Z", "+00:00"))
+        except Exception:
+            join_dl = None
+    if isinstance(join_dl, datetime) and join_dl.tzinfo is None:
+        join_dl = join_dl.replace(tzinfo=timezone.utc)
+    is_after_join = (not join_dl) or (now >= join_dl)
+    voting_started = is_after_join and challenge.get("status") != "open"
+    voting_open = voting_started and challenge.get("status") in ("active", "voting")
     feed = get_voting_feed(
         str(challenge_id),
         str(user["id"]),
@@ -522,6 +557,7 @@ def voting_page(
             "pending_votes": pending_votes,
             "unvoted_count": unvoted_count,
             "voting_open": voting_open,
+            "voting_started": voting_started,
             "vote_success": vote == "success",
             "vote_error": vote_error,
             "max_attempts": max_attempts,
@@ -557,11 +593,32 @@ async def vote_on_evidence(
             else:
                 approve = bool(raw_val)
 
+    from urllib.parse import quote_plus
     try:
         result = cast_vote(str(evidence_id), str(user["id"]), approve)
-    except HTTPException:
+    except HTTPException as e:
+        accept = request.headers.get("accept", "")
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in accept or "application/json" in content_type:
+            raise
+        if return_to and str(return_to).startswith("/challenges/"):
+            target_path = str(return_to).split("?")[0]
+            return RedirectResponse(
+                url=f"{target_path}?vote_error={quote_plus(str(e.detail))}",
+                status_code=303,
+            )
         raise
     except ValueError as e:
+        accept = request.headers.get("accept", "")
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in accept or "application/json" in content_type:
+            raise HTTPException(status_code=400, detail=str(e))
+        if return_to and str(return_to).startswith("/challenges/"):
+            target_path = str(return_to).split("?")[0]
+            return RedirectResponse(
+                url=f"{target_path}?vote_error={quote_plus(str(e))}",
+                status_code=303,
+            )
         raise HTTPException(status_code=400, detail=str(e))
 
     challenge_id = result["challenge_id"]

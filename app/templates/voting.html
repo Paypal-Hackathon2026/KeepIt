@@ -29,10 +29,14 @@
       <div class="detail-top-actions">
         {% if challenge.voting_deadline_fmt %}
           <span class="voting-deadline-pill">
-            <i class="fa-solid fa-clock"></i> Closes: {{ challenge.voting_deadline_fmt }}
+            <i class="fa-solid fa-clock"></i> Closes: <span data-utc="{{ challenge.voting_deadline }}">{{ challenge.voting_deadline_fmt }}</span>
           </span>
         {% endif %}
-        {% if not voting_open %}
+        {% if not voting_started %}
+          <span class="text-muted" style="font-size: 13px; font-weight: 700;">
+            <i class="fa-solid fa-clock"></i> Voting starts after join deadline
+          </span>
+        {% elif not voting_open %}
           <span class="text-muted" style="font-size: 13px; font-weight: 700;">
             <i class="fa-solid fa-lock"></i> Voting closed
           </span>
@@ -172,7 +176,11 @@
                         <span class="badge-voted-no"><i class="fa-solid fa-circle-xmark"></i> Rejected by community</span>
                       {% endif %}
                     </div>
-                  {% elif challenge.status in ['closed', 'settling', 'settled', 'cancelled'] %}
+                  {% elif not voting_started %}
+                    <div class="resolved-status-box">
+                      <span class="text-muted"><i class="fa-solid fa-clock"></i> Voting starts after join deadline</span>
+                    </div>
+                  {% elif challenge.status in ['closed', 'settling', 'settled', 'cancelled'] or not voting_open %}
                     <div class="resolved-status-box">
                       <span class="text-muted"><i class="fa-solid fa-lock"></i> Voting has concluded</span>
                     </div>
@@ -180,7 +188,7 @@
                 </div>
               </article>
 
-              {% if challenge.status not in ['closed', 'settling', 'settled', 'cancelled'] %}
+              {% if voting_open and ev.status == 'needs_vote' %}
                 <div class="vote-side-actions">
                   <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-side-form">
                     <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">

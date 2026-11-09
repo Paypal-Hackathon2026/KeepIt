@@ -315,7 +315,7 @@ def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
     try:
         chal_res = (
             supabase.table("challenges")
-            .select("id, status, voting_deadline, proof_deadline, verification_mode")
+            .select("id, status, voting_deadline, proof_deadline, verification_mode, join_deadline")
             .eq("id", challenge_id)
             .execute()
         )
@@ -324,6 +324,25 @@ def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
             if isinstance(chal_data, dict):
                 verification_mode = chal_data.get("verification_mode", "ai")
                 now = datetime.now(timezone.utc)
+                if chal_data.get("status") == "open":
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Voting has not started yet (join deadline has not passed)",
+                    )
+                join_dl = chal_data.get("join_deadline")
+                if isinstance(join_dl, str):
+                    try:
+                        join_dl = datetime.fromisoformat(join_dl.replace("Z", "+00:00"))
+                    except Exception:
+                        join_dl = None
+                if isinstance(join_dl, datetime):
+                    if join_dl.tzinfo is None:
+                        join_dl = join_dl.replace(tzinfo=timezone.utc)
+                    if now < join_dl:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Voting has not started yet (join deadline has not passed)",
+                        )
                 if chal_data.get("status") in ("closed", "settling", "settled", "cancelled"):
                     raise HTTPException(
                         status_code=400,
