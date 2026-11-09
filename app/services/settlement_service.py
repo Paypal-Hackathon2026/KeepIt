@@ -43,10 +43,24 @@ def settle(challenge_id:UUID)->dict:
                 .execute())
     if not lock_resp.data:
         raise HTTPException(status_code=409, detail="Challenge is already being settled.")
-    if deadline_passed:
+    unresolved_ev=(
+        supabase.table("evidence")
+        .select("id")
+        .eq("challenge_id", ch_id)
+        .eq("status", "needs_vote")
+        .execute()
+    )
+    has_unresolved_evidence=bool(unresolved_ev.data)
+    if has_unresolved_evidence:
+        logger.info(f"Challenge {ch_id} has unresolved evidence, refunding entry fees to all participants.")
+        supabase.table("participants").update({"outcome":"forfeited"}).eq("challenge_id", ch_id).execute()
+        for participant in p:
+            participant["outcome"]="forfeited"
+    elif deadline_passed:
+        supabase.table("participants").update({"outcome":"forfeited"}).eq("challenge_id", ch_id).eq("outcome", "pending").execute()
         for participant in p:
             if participant["outcome"]=="pending":
-                supabase.table("participants").update({"outcome":"forfeited"}).eq("challenge_id", ch_id).eq("user_id", participant["user_id"]).execute()
+                participant["outcome"]="forfeited"
     payouts_mapping=compute_payouts(participants=p, entry_fee_minor=ch["entry_fee_minor"])
     to_pay = {uid: amt for uid, amt in payouts_mapping.items() if amt > 0}
     if not to_pay:
