@@ -161,17 +161,128 @@
 
 /* About Us Section */
 .home-about {
-  max-width: 40rem;
+  max-width: 58rem;
   margin: 0 auto;
   padding: 80px 20px 48px;
   text-align: center;
 }
 
-.home-about p {
-  margin: 0;
+.home-about .about-text {
+  max-width: 42rem;
+  margin: 0 auto;
   font-size: 17px;
   color: var(--text-muted);
   line-height: 1.6;
+}
+
+/* Team Grid (4 Members) */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 32px;
+}
+
+@media (min-width: 768px) {
+  .team-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+
+.team-card {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 24px 14px 20px;
+  border: 2px solid var(--cream-dark);
+  box-shadow: 4px 4px 0 var(--pink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--text);
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+
+.team-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--blue);
+  border-color: var(--blue);
+}
+
+.team-avatar-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 4px;
+}
+
+.team-avatar-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  box-shadow: 2px 2px 0 var(--pink);
+}
+
+.team-avatar-fallback {
+  display: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 22px;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 0 var(--pink);
+}
+
+.team-github-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #24292f;
+  color: #ffffff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 1px 1px 0 var(--pink);
+}
+
+.team-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--blue);
+  line-height: 1.2;
+}
+
+.team-github-handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--cream);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--cream-dark);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.team-card:hover .team-github-handle {
+  background: var(--blue);
+  color: #ffffff;
+  border-color: var(--blue);
 }
 
 /* Built With Section */
@@ -207,7 +318,7 @@
 }
 
 .tech-card {
-  background: var(--cream);
+  background: var(--surface);
   border-radius: 16px;
   padding: 18px 20px;
   display: flex;
@@ -215,12 +326,13 @@
   gap: 8px;
   border: 2px solid var(--cream-dark);
   box-shadow: 4px 4px 0 var(--pink);
-  transition: transform 0.12s, box-shadow 0.12s;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
 }
 
 .tech-card:hover {
   transform: translate(-2px, -2px);
   box-shadow: 6px 6px 0 var(--blue);
+  border-color: var(--blue);
 }
 
 .tech-card-paypal {
