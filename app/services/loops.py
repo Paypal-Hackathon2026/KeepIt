@@ -4,7 +4,14 @@ from app.services.settlement_service import settle
 from app.db import supabase
 
 logger = logging.getLogger(__name__)
-
+def sync_challenge_statuses():
+    now=datetime.now(timezone.utc).isoformat()
+    try:
+        supabase.table("challenges").update({"status": "active"}).eq("status","open").lte("join_deadline", now).execute()
+        supabase.table("challenges").update({"status": "voting"}).eq("status","active").lte("proof_deadline", now).gt("voting_deadline", now).execute()
+        supabase.table("challenges").update({"status": "closed"}).eq.in_("status",["active","voting"]).lte("voting_deadline", now).execute()
+    except Exception as e:
+        logger.error("Error syncing challenge statuses: ", e)
 def check_challenges_ready_for_settlement():
     now=datetime.now(timezone.utc).isoformat()
     try:
