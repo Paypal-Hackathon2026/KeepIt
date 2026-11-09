@@ -125,3 +125,5 @@ create table if not exists votes (
 );
 
 alter table votes enable row level security;
+
+alter table challenges add column if not exists paypal_batch_id text unique;
