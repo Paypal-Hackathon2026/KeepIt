@@ -956,4 +956,136 @@ def test_voting_notifications_hidden_when_challenge_is_settling_or_closed():
             assert f"/evidence/{other_evidence_id}/vote" not in resp.text
 
 
+def test_ai_mode_voting_page_only_shows_needs_vote_photos():
+    """
+    In an AI arbiter challenge (verification_mode == 'ai'), the voting page feed must
+    strictly show photos with status 'needs_vote'. Photos that were auto-approved or rejected
+    by AI must not appear in the voting feed.
+    """
+    challenge_id = uuid.uuid4()
+    mock_challenge = {
+        "id": challenge_id,
+        "creator_id": MOCK_USER["id"],
+        "title": "AI Arbiter Challenge",
+        "criteria": "Run 5km",
+        "verification_mode": "ai",
+        "status": "active",
+        "participants": [
+            {"user_id": MOCK_USER["id"], "paid": True, "display_name": "Alice Tester"},
+            {"user_id": OTHER_USER_ID, "paid": True, "display_name": "Bob Runner"},
+        ],
+    }
+
+    raw_feed_items = [
+        {
+            "id": str(uuid.uuid4()),
+            "challenge_id": str(challenge_id),
+            "user_id": OTHER_USER_ID,
+            "author_name": "Bob Runner",
+            "is_me": False,
+            "attempt": 1,
+            "status": "auto_approved",
+            "photo_url": "https://example.com/bob_auto_approved.jpg",
+            "my_vote": None,
+            "yes_count": 0,
+            "no_count": 0,
+            "total_votes": 0,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "challenge_id": str(challenge_id),
+            "user_id": OTHER_USER_ID,
+            "author_name": "Bob Runner",
+            "is_me": False,
+            "attempt": 2,
+            "status": "rejected",
+            "photo_url": "https://example.com/bob_rejected.jpg",
+            "my_vote": None,
+            "yes_count": 0,
+            "no_count": 0,
+            "total_votes": 0,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "challenge_id": str(challenge_id),
+            "user_id": OTHER_USER_ID,
+            "author_name": "Bob Runner",
+            "is_me": False,
+            "attempt": 3,
+            "status": "needs_vote",
+            "photo_url": "https://example.com/bob_needs_vote.jpg",
+            "my_vote": None,
+            "yes_count": 0,
+            "no_count": 0,
+            "total_votes": 0,
+        },
+    ]
+
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.challenge_pages.get_voting_feed", return_value=raw_feed_items):
+
+        resp = client.get(f"/challenges/{challenge_id}/voting")
+        assert resp.status_code == 200
+        html = resp.text
+
+        # Only attempt 3 (needs_vote) should be in the feed
+        assert "bob_needs_vote.jpg" in html
+        assert "bob_auto_approved.jpg" not in html
+        assert "bob_rejected.jpg" not in html
+
+
+def test_group_voting_mode_does_not_render_ai_arbiter_opinion():
+    """
+    In group vote only challenges (verification_mode == 'vote'), attempt cards should not
+    say "AI Arbiter's opinion", only "Needs voting".
+    In AI mode challenges, "AI Arbiter's opinion" should be displayed.
+    """
+    challenge_id = uuid.uuid4()
+    mock_evidence = [
+        {
+            "attempt": 1,
+            "status": "needs_vote",
+            "photo_url": "https://example.com/proof.jpg",
+            "verdict": None,
+        }
+    ]
+
+    # 1. Group vote challenge
+    mock_challenge_vote = {
+        "id": challenge_id,
+        "creator_id": MOCK_USER["id"],
+        "title": "Vote Only Challenge",
+        "criteria": "Cook pasta",
+        "entry_fee_minor": 1000,
+        "pool_minor": 1000,
+        "verification_mode": "vote",
+        "status": "active",
+        "participants": [
+            {"user_id": MOCK_USER["id"], "paid": True, "outcome": "pending"},
+        ],
+    }
+
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_vote), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=mock_evidence), \
+         patch("app.routes.challenge_pages.get_pending_votes_for_user", return_value=[]):
+
+        resp = client.get(f"/challenges/{challenge_id}")
+        assert resp.status_code == 200
+        assert "Needs voting" in resp.text
+        assert "AI Arbiter&#39;s opinion" not in resp.text
+        assert "AI Arbiter's opinion" not in resp.text
+
+    # 2. AI Arbiter challenge
+    mock_challenge_ai = dict(mock_challenge_vote, verification_mode="ai")
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_ai), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=mock_evidence), \
+         patch("app.routes.challenge_pages.get_pending_votes_for_user", return_value=[]):
+
+        resp = client.get(f"/challenges/{challenge_id}")
+        assert resp.status_code == 200
+        assert "Needs voting" in resp.text
+        assert ("AI Arbiter&#39;s opinion" in resp.text or "AI Arbiter's opinion" in resp.text)
+
+
+
 

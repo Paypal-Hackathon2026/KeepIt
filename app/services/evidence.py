@@ -130,21 +130,40 @@ def get_voting_feed(
     challenge_id: str,
     user_id: str,
     participants: list[dict] | None = None,
+    verification_mode: str | None = None,
 ) -> list[dict]:
     """
-    Returns all submitted evidence for a challenge chronologically formatted for
-    a chat/messenger-style voting view.
+    Returns submitted evidence for a challenge chronologically formatted for
+    the voting view.
     Includes both the current user's evidence (is_me=True, shown on right)
     and other participants' evidence (is_me=False, shown on left with voting options).
+    For AI arbiter challenges (verification_mode != 'vote'), only evidence marked as
+    'needs_vote' is included (auto_approved and rejected photos are excluded).
     """
     try:
-        result = (
+        if verification_mode is None:
+            try:
+                c_res = supabase.table("challenges").select("verification_mode").eq("id", challenge_id).execute()
+                if c_res.data:
+                    verification_mode = c_res.data[0].get("verification_mode", "ai")
+                else:
+                    verification_mode = "ai"
+            except Exception:
+                verification_mode = "ai"
+
+        query = (
             supabase.table("evidence")
-            .select("id, challenge_id, user_id, attempt, storage_path, status")
+            .select("id, challenge_id, user_id, attempt, storage_path, status, created_at")
             .eq("challenge_id", challenge_id)
-            .execute()
         )
+        if verification_mode != "vote":
+            query = query.eq("status", "needs_vote")
+
+        result = query.execute()
         items = result.data or []
+        if verification_mode != "vote":
+            items = [item for item in items if item.get("status") == "needs_vote"]
+
         if not items:
             return []
 

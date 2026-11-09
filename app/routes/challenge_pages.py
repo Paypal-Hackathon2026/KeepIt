@@ -408,9 +408,17 @@ def voting_page(
     if not has_paid:
         raise HTTPException(status_code=403, detail="Only paid participants can access voting")
 
+    verification_mode = challenge.get("verification_mode", "ai")
     voting_open = challenge.get("status") not in ("closed", "settling", "settled", "cancelled")
-    feed = get_voting_feed(str(challenge_id), str(user["id"]), participants)
-    if not feed:
+    feed = get_voting_feed(
+        str(challenge_id),
+        str(user["id"]),
+        participants,
+        verification_mode=verification_mode,
+    )
+    if verification_mode != "vote" and feed:
+        feed = [ev for ev in feed if ev.get("status") == "needs_vote"]
+    elif not feed:
         feed = get_pending_votes_for_user(str(challenge_id), str(user["id"]), participants)
 
     pending_votes = [
@@ -422,7 +430,6 @@ def voting_page(
         if voting_open
         else 0
     )
-    verification_mode = challenge.get("verification_mode", "ai")
     max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
 
     return templates.TemplateResponse(

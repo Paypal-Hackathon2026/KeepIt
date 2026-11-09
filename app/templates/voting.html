@@ -41,8 +41,10 @@
           </span>
         {% elif unvoted_count and unvoted_count > 0 %}
           <span class="voting-pill">{{ unvoted_count }} awaiting your vote</span>
-        {% else %}
+        {% elif pending_votes and pending_votes | length > 0 %}
           <span class="badge-voted-yes"><i class="fa-solid fa-check"></i> You've voted on all proofs</span>
+        {% else %}
+          <span class="badge-voted-yes"><i class="fa-solid fa-check"></i> No pending votes</span>
         {% endif %}
       </div>
     </div>
@@ -229,10 +231,18 @@
       {% else %}
         <div class="detail-card text-center" style="padding: 48px 24px; text-align: center;">
           <h2 style="font-family: var(--font-display); font-size: 24px; color: var(--blue); margin-bottom: 8px;">
-            No photos submitted yet
+            {% if challenge.verification_mode == 'vote' %}
+              No photos submitted yet
+            {% else %}
+              No photos requiring voting
+            {% endif %}
           </h2>
           <p style="color: var(--text-muted); margin-bottom: 20px;">
-            When participants submit proof photos, they will appear here chronologically for community voting.
+            {% if challenge.verification_mode == 'vote' %}
+              When participants submit proof photos, they will appear here chronologically for community voting.
+            {% else %}
+              Only photos that the AI Arbiter flagged for community review appear here. Currently, there are none.
+            {% endif %}
           </p>
           <a href="/challenges/{{ challenge.id }}" class="btn-secondary">
             Back to challenge

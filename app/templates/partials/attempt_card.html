@@ -7,7 +7,9 @@
          title="Click to enlarge photo">
   {% endif %}
   <div class="verdict-content">
-    <p class="verdict-title">AI Arbiter's opinion</p>
+    {% if (challenge.verification_mode if challenge else '') != "vote" %}
+      <p class="verdict-title">AI Arbiter's opinion</p>
+    {% endif %}
     <p class="verdict-attempt-number">Attempt {{ a.attempt }} of {{ max_attempts }}</p>
 
     {% if a.status == "auto_approved" or a.status == "approved" %}
