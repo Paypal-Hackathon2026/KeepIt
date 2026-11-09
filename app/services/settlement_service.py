@@ -89,6 +89,7 @@ def settle(challenge_id:UUID)->dict:
         batch_id=paypal_reult["batch_header"]["payout_batch_id"]
     except Exception as exc:
         logger.exception("Paypal Payouts error for challenge %s: %s", ch_id, str(exc))
+        supabase.table("challenges").update({"status":ch["status"]}).eq("id", ch_id).execute()
         raise HTTPException(status_code=502, detail="Paypal Payouts failed") from exc
     supabase.table("challenges").update({"paypal_batch_id": batch_id}).eq("id", ch_id).execute()
     return {"status": "settling", "paypal_batch_id": batch_id, "payouts": len(items_to_send)}

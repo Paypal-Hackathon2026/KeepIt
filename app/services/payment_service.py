@@ -27,12 +27,11 @@ def join_challenge(challenge_id: str, user_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Challenge not found")
     if challenge_response.data["status"] != "open":
         raise HTTPException(status_code=409, detail="Challenge is not open")
-    if datetime.fromisoformat(
-        challenge_response.data["join_deadline"].replace("Z", "+00:00")) <= datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=409,
-            detail="Joining deadline has passed",
-        )
+    join_dl=datetime.fromisoformat(challenge_response.data["join_deadline"].replace("Z", "+00:00"))
+    if join_dl.tzinfo is None:
+        join_dl=join_dl.replace(tzinfo=timezone.utc)
+    if join_dl<=datetime.now(timezone.utc):
+        raise HTTPException(status_code=409, detail="Challenge join deadline has passed")
     participant_response = (
     supabase.table("participants")
     .select("challenge_id,user_id,paid")
@@ -218,9 +217,11 @@ def complete_payment(paypal_order_id: str, user_id: str) -> dict:
         raise HTTPException(status_code=409, detail="Payment was cancelled")
     if payment["status"] == "captured":
         return _mark_participant_paid(payment)
-    ch=supabase.table("challengess").select("status,join_deadline").eq("id", payment["challenge_id"]).single().execute().data
+    ch=supabase.table("challenges").select("status,join_deadline").eq("id", payment["challenge_id"]).single().execute().data
     if ch:
         join_dl=datetime.fromisoformat(ch["join_deadline"].replace("Z", "+00:00"))
+        if join_dl.tzinfo is None:
+            join_dl=join_dl.replace(tzinfo=timezone.utc)
         if ch["status"]!="open" or join_dl<=datetime.now(timezone.utc):
             raise HTTPException(status_code=409, detail="Challenge is not open for joining - cannot complete payment")
 

@@ -190,7 +190,7 @@ def challenge_detail_page(
     is_owner = bool(creator_id and str(creator_id) == str(user.get("id")))
     paid_participants = [p for p in participants if p.get("paid")]
     all_resolved = bool(paid_participants) and all(p.get("outcome") != "pending" for p in paid_participants)
-    can_settle = is_owner and (challenge.get("status") in ALLOWED_STATUSES) and all_resolved
+    can_settle = is_owner and (challenge.get("status") in ALLOWED_STATUSES) and (all_resolved or challenge.get("status") == "closed")
 
     return templates.TemplateResponse(
         request,

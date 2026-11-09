@@ -9,7 +9,6 @@ from uuid import UUID
 
 from app.models.challenge import ChallengeCreate
 from app.db import supabase
-from app.services.loops import sync_challenge_statuses
 logger = logging.getLogger(__name__)
 
 PROOF_CODE_LENGTH = 8
@@ -194,7 +193,6 @@ def get_challenge_by_id(challenge_id: UUID) -> dict | None:
     Fetch a single challenge by ID with its participants and calculated pool.
     Returns None if the challenge does not exist.
     """
-    sync_challenge_statuses(str(challenge_id))
     challenges_details = (
         supabase.table("challenges")
         .select("*, participants(user_id, paid, outcome, joined_at, profiles(display_name))")
@@ -206,6 +204,7 @@ def get_challenge_by_id(challenge_id: UUID) -> dict | None:
         return None
 
     challenge = challenges_details.data[0]
+    sync_challenge_status(challenge)
     raw_participants = challenge.get("participants", [])
 
     participants = [
