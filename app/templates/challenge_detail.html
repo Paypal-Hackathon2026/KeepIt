@@ -116,6 +116,9 @@
         <p class="field-error">You used all your attempts for this challenge.</p>
       {% elif attempts | length >= max_attempts %}
         <p class="field-error"><i class="fa-solid fa-circle-info"></i> You have used all allowed attempts ({{ attempts | length }}/{{ max_attempts }}).</p>
+      {% elif has_needs_vote %}
+        <p class="field-info"><i class="fa-solid fa-users"></i>Your submission was sent to a group vote. You cannot upload more photos.</p>
+
       {% elif challenge.status in ['open', 'active'] %}
         {% include "partials/proof_form.html" %}
       {% else %}

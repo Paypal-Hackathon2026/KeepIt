@@ -424,7 +424,7 @@ def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
             max_allowed_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
             if new_status == "approved":
                 mark_verified(challenge_id, author_id)
-            elif new_status == "rejected" and evidence.get("attempt", 1) >= max_allowed_attempts:
+            elif new_status == "rejected":
                 mark_forfeited(challenge_id, author_id)
             current_status = new_status
 

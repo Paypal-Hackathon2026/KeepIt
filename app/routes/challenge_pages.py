@@ -38,6 +38,7 @@ PROOF_ERRORS = {
     "not_image": "This file is not a photo. Try again.",
     "no_attempts": "You have already used all allowed attempts.",
     "closed": "You can't upload more photos for this challenge.",
+    "needs_vote": "Your photo has been sent to other participants for voting. You cannot upload more photos.",
 }
 
 router = APIRouter()
@@ -184,7 +185,7 @@ def challenge_detail_page(
         else 0
     )
     max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
-
+    has_needs_vote=any(a.get("status")=="needs_vote" for a in attempts)
     ALLOWED_STATUSES = ["active", "closed", "voting"]
     creator_id = challenge.get("creator_id")
     is_owner = bool(creator_id and str(creator_id) == str(user.get("id")))
@@ -213,6 +214,7 @@ def challenge_detail_page(
             "vote_success": vote == "success",
             "vote_error": vote_error,
             "max_attempts": max_attempts,
+            "has_needs_vote": has_needs_vote,
             "can_settle": can_settle,
         },
     )
@@ -311,6 +313,9 @@ def upload_evidence(
 
     if me.get("outcome") != "pending":
         return RedirectResponse(f"{back}?proof_error=closed", status_code=303)
+    user_attempts = get_my_evidence(str(challenge_id), str(user["id"]))
+    if any(a.get("status") == "needs_vote" for a in user_attempts):
+        return RedirectResponse(f"{back}?proof_error=needs_vote", status_code=303)
 
     now = datetime.now(timezone.utc)
     proof_dl = challenge.get("proof_deadline")
