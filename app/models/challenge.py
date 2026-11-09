@@ -29,8 +29,7 @@ class ChallengeCreate(BaseModel):
     def must_be_in_future(cls, v: datetime | None) -> datetime | None:
         if v is None:
             return v
-        if v.tzinfo is None:
-            v = v.replace(tzinfo=timezone.utc)
+        v=v.astimezone(timezone.utc)
         if v <= datetime.now(timezone.utc):
             raise ValueError("Deadline must be in the future")
         return v

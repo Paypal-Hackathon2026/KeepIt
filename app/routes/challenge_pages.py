@@ -108,10 +108,20 @@ def created_challenge(request: Request,
 
 def _format_deadline(value) -> str:
     """
-    Turn an ISO datetime string or datetime object into a readable string.
+    Turn an ISO datetime string or datetime object into a readable string in local time.
     """
     if not value:
         return ""
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except Exception:
+            s=str(value).replace("T", " ")
+            return s[:16]
+    if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            value = value.astimezone()
+            return value.strftime("%Y-%m-%d %H:%M")
     s = str(value).replace("T", " ")
     return s[:16]
 
