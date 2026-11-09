@@ -26,6 +26,7 @@ from app.services.evidence import (
     mark_forfeited
 )
 from app.services.arbiter import judge, save_verdict, decide
+from app.services.settlement_service import settle
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 PROOF_ERRORS = {
@@ -155,6 +156,11 @@ def challenge_detail_page(
     )
     has_paid = bool(my_participant and my_participant.get("paid"))
     attempts = get_my_evidence(str(challenge_id), str(user["id"])) if has_paid else []
+    ALLOWED_STATUSES = ["active", "closed", "voting"]
+    is_owner = str(challenge["creator_id"]) == str(user["id"])
+    paid_participants = [p for p in participants if p.get("paid")]
+    all_resolved = bool(paid_participants) and all(p.get("outcome") != "pending" for p in paid_participants)
+    can_settle = is_owner and (challenge["status"] in ALLOWED_STATUSES) and all_resolved
 
     return templates.TemplateResponse(
         request,
@@ -172,6 +178,7 @@ def challenge_detail_page(
             "proof_sent_to_vote": proof == "sent_to_vote",
             "attempts": attempts,
             "max_attempts": MAX_ATTEMPTS,
+            "can_settle": can_settle,
         },
     )
 
@@ -308,3 +315,15 @@ def upload_evidence(
         return RedirectResponse(f"{back}?proof=sent_to_vote", status_code=303)
 
     return RedirectResponse(f"{back}?proof={status}", status_code=303)
+@router.post("/challenges/{challenge_id}/settle")
+def settle_challenge(
+    challenge_id: UUID,
+    user: dict = Depends(current_user),
+):
+    challenge = get_challenge_by_id(challenge_id)
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    if str(challenge["creator_id"]) != str(user["id"]):
+        raise HTTPException(status_code=403, detail="Only the challenge creator can settle the challenge")
+    settle(challenge_id)
+    return RedirectResponse(url=f"/challenges/{challenge_id}", status_code=303)

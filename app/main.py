@@ -13,7 +13,7 @@ from app.services.loops import check_challenges_ready_for_settlement
 async def lifespan(app: FastAPI):
     async def settle_worker():
         while True:
-            asyncio.to_thread(check_challenges_ready_for_settlement)
+            await asyncio.to_thread(check_challenges_ready_for_settlement)
             await asyncio.sleep(60)
 
     task = asyncio.create_task(settle_worker())

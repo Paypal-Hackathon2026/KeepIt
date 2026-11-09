@@ -23,7 +23,7 @@ def settle(challenge_id:UUID)->dict:
     ALLOWED_STATUS=["active","closed","voting"]
     if ch["status"] not in ALLOWED_STATUS:
         raise HTTPException(status_code=409, detail=f"Challenge status does not allow settlement.")
-    participants=(supabase.table("challenge_participants")
+    participants=(supabase.table("participants")
                  .select("user_id,outcome,profiles(paypal_email)")
                  .eq("challenge_id", ch_id)
                  .eq("paid", True)
@@ -33,7 +33,7 @@ def settle(challenge_id:UUID)->dict:
         supabase.table("challenges").update({"status":"settled"}).eq("id", ch_id).execute()
         return {"settled": True, "payouts": 0}
     deadline_passed=(True if ch["status"]=="closed" else False)
-    all_resolved=all(p["outcome"]!="pending" for participant in p)
+    all_resolved=all(participant["outcome"]!="pending" for participant in p)
     if not (deadline_passed or all_resolved):
         raise HTTPException(status_code=409, detail="Challenge is not ready for settlement.")
     lock_resp=(supabase.table("challenges")
@@ -59,7 +59,7 @@ def settle(challenge_id:UUID)->dict:
         "status": "pending"}
         for uid,amt in to_pay.items()
     ]
-    supabase.table("payouts").upsert(payout_rows,on_conflict="user_id,challenge_id").execute()
+    supabase.table("payouts").upsert(payout_rows, on_conflict="challenge_id,user_id").execute()
     saved_payouts=(supabase.table("payouts")
                      .select("id,user_id,amount_minor")
                      .eq("challenge_id", ch_id)
@@ -76,6 +76,6 @@ def settle(challenge_id:UUID)->dict:
     except Exception as exc:
         logger.exception("Paypal Payouts error for challenge %s: %s", ch_id, str(exc))
         raise HTTPException(status_code=502, detail="Paypal Payouts failed") from exc
-    supabase.table("challenges").update({"payout_batch_id": batch_id}).eq("id", ch_id).execute()
-    return {"status": "settling","paypal_batch_id": batch_id, "payouts": len(items_to_send)}
+    supabase.table("challenges").update({"paypal_batch_id": batch_id}).eq("id", ch_id).execute()
+    return {"status": "settling", "paypal_batch_id": batch_id, "payouts": len(items_to_send)}
 

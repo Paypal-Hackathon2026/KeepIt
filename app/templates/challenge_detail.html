@@ -87,7 +87,18 @@
       {% endif %}
       {% include "partials/attempts.html" %}
     {% endif %}
-
+    {% if can_settle %}
+    <div class="settle-box">
+      <p class="settle-box-text">
+        <i class="fa-solid fa-circle-check"></i> All participants have finished! This challenge is ready to be settled.
+      </p>
+      <form method="post" action="/challenges/{{ challenge.id }}/settle">
+        <button type="submit" class="btn-primary btn-settle btn-full">
+          Settle Challenge &amp; Payout
+        </button>
+      </form>
+    </div>
+    {% endif %}
   </section>
 
   <div id="challenge-state"
