@@ -88,7 +88,7 @@
   <!-- Chronological Feed of Photo Submissions -->
   <section class="voting-feed-section">
     <div class="voting-feed-heading">
-      <span><i class="fa-solid fa-camera"></i> Submissions Timeline</span>
+      <span>Submissions Timeline</span>
     </div>
 
     <div class="voting-feed">
@@ -103,17 +103,15 @@
                     <span class="feed-author-name feed-author-name-me">
                       <i class="fa-solid fa-user"></i> You
                     </span>
-                    <span class="feed-author-badge feed-badge-me">Your submission</span>
                   </div>
-                  <span class="feed-attempt-badge">Attempt {{ ev.attempt }} of {{ max_attempts }}</span>
                 </div>
 
                 {% if ev.photo_url %}
                   <div class="feed-photo-wrapper">
                     <img class="feed-photo vote-photo-clickable"
                          src="{{ ev.photo_url }}"
-                         alt="Your proof - Attempt {{ ev.attempt }}"
-                         onclick="openImageModal(this.src, 'Your proof - Attempt {{ ev.attempt }}')"
+                         alt="Your proof"
+                         onclick="openImageModal(this.src, 'Your proof')"
                          title="Click to enlarge photo">
                   </div>
                 {% endif %}
@@ -135,14 +133,10 @@
                     </span>
 
                     <div class="vote-stats">
-                      <span class="vote-stat-yes"><i class="fa-solid fa-thumbs-up"></i> {{ ev.yes_count }} approve</span>
-                      <span class="vote-stat-no"><i class="fa-solid fa-thumbs-down"></i> {{ ev.no_count }} reject</span>
-                      <span class="text-muted">({{ ev.total_votes }} votes)</span>
+                      <span class="vote-stat-yes"><i class="fa-solid fa-thumbs-up"></i> {{ ev.yes_count }}</span>
+                      <span class="vote-stat-no"><i class="fa-solid fa-thumbs-down"></i> {{ ev.no_count }}</span>
                     </div>
                   </div>
-                  <p class="feed-me-note">
-                    <i class="fa-solid fa-circle-info"></i> Your submission &bull; other participants vote on this
-                  </p>
                 </div>
               </article>
             </div>
@@ -153,41 +147,25 @@
                 <div class="feed-card-header">
                   <div class="feed-author-info">
                     <span class="feed-author-name">{{ ev.author_name }}</span>
-                    <span class="feed-author-badge">Participant</span>
                   </div>
-                  <span class="feed-attempt-badge">Attempt {{ ev.attempt }} of {{ max_attempts }}</span>
                 </div>
 
                 {% if ev.photo_url %}
                   <div class="feed-photo-wrapper">
                     <img class="feed-photo vote-photo-clickable"
                          src="{{ ev.photo_url }}"
-                         alt="Proof by {{ ev.author_name }} - Attempt {{ ev.attempt }}"
-                         onclick="openImageModal(this.src, 'Proof by {{ ev.author_name }} - Attempt {{ ev.attempt }}')"
+                         alt="Proof by {{ ev.author_name }}"
+                         onclick="openImageModal(this.src, 'Proof by {{ ev.author_name }}')"
                          title="Click to enlarge photo">
                   </div>
                 {% endif %}
 
                 <!-- Voting controls under photo -->
                 <div class="feed-card-footer">
-                  <p class="vote-prompt">Does this photo satisfy the challenge criteria?</p>
-
                   <div class="vote-stats">
                     <span class="vote-stat-yes"><i class="fa-solid fa-thumbs-up"></i> {{ ev.yes_count }}</span>
                     <span class="vote-stat-no"><i class="fa-solid fa-thumbs-down"></i> {{ ev.no_count }}</span>
-                    <span class="text-muted">({{ ev.total_votes }} total)</span>
                   </div>
-
-                  {% if ev.my_vote is not none %}
-                    <div class="my-vote-status">
-                      <span>Your vote:</span>
-                      {% if ev.my_vote %}
-                        <span class="badge-voted-yes"><i class="fa-solid fa-check"></i> Approved</span>
-                      {% else %}
-                        <span class="badge-voted-no"><i class="fa-solid fa-xmark"></i> Rejected</span>
-                      {% endif %}
-                    </div>
-                  {% endif %}
 
                   {% if ev.status in ['approved', 'rejected'] %}
                     <div class="resolved-status-box">
@@ -197,33 +175,37 @@
                         <span class="badge-voted-no"><i class="fa-solid fa-circle-xmark"></i> Rejected by community</span>
                       {% endif %}
                     </div>
-                  {% endif %}
-
-                  {% if challenge.status not in ['closed', 'settling', 'settled', 'cancelled'] %}
-                    <div class="vote-actions">
-                      <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-form">
-                        <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">
-                        <input type="hidden" name="approve" value="true">
-                        <button type="submit" class="btn-vote btn-vote-approve {% if ev.my_vote is true %}active{% endif %}" title="Vote to approve this proof">
-                          <i class="fa-solid fa-thumbs-up"></i> Approve
-                        </button>
-                      </form>
-
-                      <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-form">
-                        <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">
-                        <input type="hidden" name="approve" value="false">
-                        <button type="submit" class="btn-vote btn-vote-reject {% if ev.my_vote is false %}active{% endif %}" title="Vote to reject this proof">
-                          <i class="fa-solid fa-thumbs-down"></i> Reject
-                        </button>
-                      </form>
-                    </div>
-                  {% else %}
-                    <div class="vote-actions">
-                      <span class="text-muted"><i class="fa-solid fa-lock"></i> Voting has concluded.</span>
+                  {% elif challenge.status in ['closed', 'settling', 'settled', 'cancelled'] %}
+                    <div class="resolved-status-box">
+                      <span class="text-muted"><i class="fa-solid fa-lock"></i> Voting has concluded</span>
                     </div>
                   {% endif %}
                 </div>
               </article>
+
+              {% if challenge.status not in ['closed', 'settling', 'settled', 'cancelled'] %}
+                <div class="vote-side-actions">
+                  <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-side-form">
+                    <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">
+                    <input type="hidden" name="approve" value="true">
+                    <button type="submit"
+                            class="btn-side-vote btn-side-vote-approve {% if ev.my_vote is true %}active{% elif ev.my_vote is false %}inactive{% endif %}"
+                            title="Approve">
+                      <i class="fa-solid fa-thumbs-up"></i>
+                    </button>
+                  </form>
+
+                  <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-side-form">
+                    <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">
+                    <input type="hidden" name="approve" value="false">
+                    <button type="submit"
+                            class="btn-side-vote btn-side-vote-reject {% if ev.my_vote is false %}active{% elif ev.my_vote is true %}inactive{% endif %}"
+                            title="Reject">
+                      <i class="fa-solid fa-thumbs-down"></i>
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
             </div>
           {% endif %}
         {% endfor %}
