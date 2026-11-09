@@ -142,8 +142,15 @@ async def paypal_webhook(request: Request):
             return JSONResponse({"status": "duplicate"}, status_code=200)
 
         event_type = payload.get("event_type") or payload.get("type")
+        resource = payload.get("resource") or {}
         if event_type == "PAYMENT.CAPTURE.COMPLETED":
             handle_payment_capture_completed(payload.get("resource") or {})
+            return JSONResponse({"status": "processed"}, status_code=200)
+        elif event_type == "PAYMENT.PAYOUTS-ITEM.SUCCEEDED":
+            handle_payout_item_succeeded(resource)
+            return JSONResponse({"status": "processed"}, status_code=200)
+        elif event_type == "PAYMENT.PAYOUTSBATCH.SUCCESS":
+            handle_payout_batch_success(resource)
             return JSONResponse({"status": "processed"}, status_code=200)
 
         return JSONResponse({"status": "ignored"}, status_code=200)
@@ -152,6 +159,31 @@ async def paypal_webhook(request: Request):
     except Exception as exc:
         logger.exception("Error handling webhook event: %s", exc)
         return JSONResponse({"detail": f"Internal error processing webhook: {exc}"}, status_code=500)
+def handle_payout_item_succeeded(resource: dict) -> None:
+    payout_item_id = resource.get("payout_item_id")
+    payout_item=resource.get("payout_item") or {}
+    sender_item_id=payout_item.get("sender_item_id")
+    if sender_item_id:
+        supabase.table("payouts").update({"status":"success", "paypal_item_id": payout_item_id}).eq("id", sender_item_id).execute()
+        logger.info(f"Marked payout {sender_item_id} as success")
+def handle_payout_batch_success(resource: dict) -> None:
+    batch_header=resource.get("batch_header") or {}
+    payout_batch_id=batch_header.get("payout_batch_id")
+    if not payout_batch_id:
+        return
+    ch_update=(
+        supabase.table("challenges")
+        .update({"status":"settled"})
+        .eq("paypal_batch_id", payout_batch_id)
+        .execute()
+    )
+    if ch_update.data:
+        challenge_id=ch_update.data[0].get("id")
+        supabase.table("payouts").update({"status":"success"}).eq("challenge_id", challenge_id).execute()
+        logger.info(f"Challenge {challenge_id} marked as settled after payout batch {payout_batch_id} succeeded")
+    else:
+        logger.warning(f"No challenge found with paypal_batch_id {payout_batch_id} to mark as settled")
+        
 
 
 @router.get("/paypal/return")
