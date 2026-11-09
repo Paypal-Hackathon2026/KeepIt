@@ -30,6 +30,7 @@ from app.services.evidence import (
     mark_forfeited
 )
 from app.services.arbiter import judge, save_verdict, decide
+from app.services.settlement_service import settle
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 PROOF_ERRORS = {
@@ -182,6 +183,13 @@ def challenge_detail_page(
     verification_mode = challenge.get("verification_mode", "ai")
     max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
 
+    ALLOWED_STATUSES = ["active", "closed", "voting"]
+    creator_id = challenge.get("creator_id")
+    is_owner = bool(creator_id and str(creator_id) == str(user.get("id")))
+    paid_participants = [p for p in participants if p.get("paid")]
+    all_resolved = bool(paid_participants) and all(p.get("outcome") != "pending" for p in paid_participants)
+    can_settle = is_owner and (challenge.get("status") in ALLOWED_STATUSES) and all_resolved
+
     return templates.TemplateResponse(
         request,
         "challenge_detail.html",
@@ -203,6 +211,7 @@ def challenge_detail_page(
             "vote_success": vote == "success",
             "vote_error": vote_error,
             "max_attempts": max_attempts,
+            "can_settle": can_settle,
         },
     )
 
@@ -362,6 +371,18 @@ def upload_evidence(
         return RedirectResponse(f"{back}?proof=sent_to_vote", status_code=303)
 
     return RedirectResponse(f"{back}?proof={status}", status_code=303)
+@router.post("/challenges/{challenge_id}/settle")
+def settle_challenge(
+    challenge_id: UUID,
+    user: dict = Depends(current_user),
+):
+    challenge = get_challenge_by_id(challenge_id)
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    if str(challenge.get("creator_id")) != str(user.get("id")):
+        raise HTTPException(status_code=403, detail="Only the challenge creator can settle the challenge")
+    settle(challenge_id)
+    return RedirectResponse(url=f"/challenges/{challenge_id}", status_code=303)
 
 
 @router.get("/challenges/{challenge_id}/voting")
@@ -474,4 +495,3 @@ async def vote_on_evidence(
         url=f"/challenges/{challenge_id}?vote=success",
         status_code=303,
     )
-
