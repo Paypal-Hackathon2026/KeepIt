@@ -178,7 +178,7 @@ def test_challenge_detail_renders_verification_mode_badge():
         assert "mode-ai" in html
 
 
-def test_upload_evidence_vote_mode_single_participant_auto_approve():
+def test_upload_evidence_vote_mode_single_participant_needs_vote():
     challenge_id = uuid.uuid4()
     mock_challenge = {
         "id": challenge_id,
@@ -219,15 +219,15 @@ def test_upload_evidence_vote_mode_single_participant_auto_approve():
         )
 
         assert resp.status_code == 303
-        assert resp.headers["location"] == f"/challenges/{challenge_id}?proof=auto_approved"
+        assert resp.headers["location"] == f"/challenges/{challenge_id}?proof=needs_vote"
 
-        # Verify save_evidence was called with status="auto_approved"
+        # Verify save_evidence was called with status="needs_vote"
         mock_save_evidence.assert_called_once()
         _, kwargs = mock_save_evidence.call_args
-        assert kwargs.get("status") == "auto_approved"
+        assert kwargs.get("status") == "needs_vote"
 
-        # Verify participant was marked verified
-        mock_mark_verified.assert_called_once_with(str(challenge_id), str(MOCK_USER["id"]))
+        # Verify participant was NOT marked verified immediately
+        mock_mark_verified.assert_not_called()
 
 
 def test_upload_evidence_vote_mode_multiple_participants_needs_vote():

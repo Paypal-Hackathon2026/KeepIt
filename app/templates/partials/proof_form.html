@@ -17,7 +17,7 @@
     {% else %}
       <p class="field-error">The AI Arbiter wasn't sure, so your photo goes to a group vote.</p>
     {% endif %}
-  {% elif proof_result == "rejected" %}
+  {% elif proof_result in ["rejected", "auto_rejected"] %}
     <p class="field-error">Your proof was rejected. Try another photo.</p>
   {% elif proof_uploaded %}
     <p class="field-success">Photo uploaded!</p>
@@ -33,9 +33,9 @@
   <p class="proof-hint">
     Write <span class="proof-chip">{{ challenge.proof_code }}</span> on a piece of paper and put it in the photo.
     {% if challenge.verification_mode == 'vote' %}
-      <span>Proof will be verified by participant votes.</span>
+      <span>Proof will be verified by participant votes (1 attempt allowed).</span>
     {% else %}
-      <span>Proof will be checked by AI Arbiter.</span>
+      <span>Proof will be checked by AI Arbiter (up to 3 attempts allowed).</span>
     {% endif %}
   </p>
 

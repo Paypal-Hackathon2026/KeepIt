@@ -18,10 +18,12 @@ create table if not exists challenges (
   entry_fee_minor integer not null check (entry_fee_minor > 0),
   proof_code text not null,
   status text not null default 'open'
-    check (status in ('open', 'active', 'settling', 'settled', 'cancelled')),
+    check (status in ('open', 'active', 'voting', 'closed', 'settling', 'settled', 'cancelled')),
   join_deadline timestamptz not null,
   proof_deadline timestamptz not null,
+  voting_deadline timestamptz not null,
   check (proof_deadline > join_deadline),
+  check (voting_deadline > proof_deadline),
   verification_mode text not null default 'ai'
     check (verification_mode in ('ai', 'vote'))
 );
@@ -89,7 +91,7 @@ create table if not exists evidence (
   attempt integer not null check (attempt between 1 and 3),
   storage_path text not null,
   status text not null default 'pending'
-    check (status in ('pending', 'auto_approved', 'needs_vote', 'approved', 'rejected')),
+    check (status in ('pending', 'auto_approved', 'auto_rejected', 'needs_vote', 'approved', 'rejected')),
   foreign key (challenge_id, user_id) references participants (challenge_id, user_id),
   unique (challenge_id, user_id, attempt),
   unique (id, challenge_id)

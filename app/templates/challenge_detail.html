@@ -24,9 +24,19 @@
           {% endif %}
         </span>
       </div>
-      <button type="button" class="btn-secondary" id="copy-invite-btn" onclick="copyInviteLink()">
-        Copy invite link
-      </button>
+      <div class="detail-top-actions">
+        <button type="button" class="btn-secondary" id="copy-invite-btn" onclick="copyInviteLink()">
+          Copy invite link
+        </button>
+        {% if has_paid %}
+          <a href="/challenges/{{ challenge.id }}/voting" target="_blank" class="btn-secondary btn-voting" id="go-to-voting-btn">
+            <i class="fa-solid fa-check-to-slot"></i> Go to voting
+            {% if voting_open and unvoted_count and unvoted_count > 0 %}
+              <span class="voting-pill">{{ unvoted_count }}</span>
+            {% endif %}
+          </a>
+        {% endif %}
+      </div>
     </div>
 
     <h1 class="detail-title">{{ challenge.title }}</h1>
@@ -58,6 +68,10 @@
         <span class="meta-value">{{ challenge.proof_deadline_fmt }}</span>
       </div>
       <div class="meta-box">
+        <span class="meta-label">Voting Deadline</span>
+        <span class="meta-value">{{ challenge.voting_deadline_fmt }}</span>
+      </div>
+      <div class="meta-box">
         <span class="meta-label">Verification Mode</span>
         <span class="meta-value">
           {% if challenge.verification_mode == 'vote' %}
@@ -78,12 +92,37 @@
     {% endif %}
 
     {% if has_paid %}
+      {% if vote_success %}
+        <p class="field-success"><i class="fa-solid fa-circle-check"></i> Your vote has been recorded!</p>
+      {% elif vote_error %}
+        <p class="field-error"><i class="fa-solid fa-circle-xmark"></i> {{ vote_error }}</p>
+      {% endif %}
+
+      {% if voting_open and unvoted_count and unvoted_count > 0 %}
+        <div class="voting-banner">
+          <div>
+            <strong><i class="fa-solid fa-check-to-slot"></i> Community Voting Active</strong>
+            <p class="voting-banner-text">There are {{ unvoted_count }} proof(s) waiting for your review.</p>
+          </div>
+          <a href="/challenges/{{ challenge.id }}/voting" target="_blank" class="btn-primary btn-sm">
+            Review proofs &rarr;
+          </a>
+        </div>
+      {% endif %}
+
       {% if my_outcome == "verified" %}
         <p class="field-success">You completed this challenge!</p>
       {% elif my_outcome == "forfeited" %}
         <p class="field-error">You used all your attempts for this challenge.</p>
-      {% else %}
+      {% elif attempts | length >= max_attempts %}
+        <p class="field-error"><i class="fa-solid fa-circle-info"></i> You have used all allowed attempts ({{ attempts | length }}/{{ max_attempts }}).</p>
+      {% elif has_needs_vote %}
+        <p class="field-info"><i class="fa-solid fa-users"></i>Your submission was sent to a group vote. You cannot upload more photos.</p>
+
+      {% elif challenge.status in ['open', 'active'] %}
         {% include "partials/proof_form.html" %}
+      {% else %}
+        <p class="text-muted"><i class="fa-solid fa-clock"></i> Proof submissions are closed for this challenge.</p>
       {% endif %}
       {% include "partials/attempts.html" %}
     {% endif %}
@@ -109,7 +148,36 @@
   </div>
 </div>
 
+<!-- Lightbox Modal for Photo Zoom -->
+<div id="image-modal" class="image-modal" onclick="closeImageModal(event)">
+  <div class="modal-content-wrapper" onclick="event.stopPropagation()">
+    <button type="button" class="modal-close" onclick="closeImageModal()" aria-label="Close enlarged photo">&times;</button>
+    <img id="modal-img" class="modal-image" src="" alt="Enlarged proof photo">
+    <div id="modal-caption" class="modal-caption"></div>
+  </div>
+</div>
+
 <script>
+function openImageModal(src, caption) {
+  const modal = document.getElementById("image-modal");
+  const img = document.getElementById("modal-img");
+  const cap = document.getElementById("modal-caption");
+  img.src = src;
+  cap.textContent = caption || "";
+  modal.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeImageModal() {
+  const modal = document.getElementById("image-modal");
+  modal.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeImageModal();
+});
+
 function copyInviteLink() {
   const btn = document.getElementById("copy-invite-btn");
   navigator.clipboard.writeText(window.location.href).then(() => {
@@ -128,7 +196,10 @@ document.getElementById("pay-form")?.addEventListener("submit", () => {
 document.getElementById("proof-form")?.addEventListener("submit", () => {
   const btn = document.getElementById("proof-btn");
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> The AI Arbiter is checking your photo…';
+  const isVoteMode = {{ 'true' if challenge.verification_mode == 'vote' else 'false' }};
+  btn.innerHTML = isVoteMode
+    ? '<i class="fa-solid fa-spinner fa-spin"></i> Uploading your photo…'
+    : '<i class="fa-solid fa-spinner fa-spin"></i> The AI Arbiter is checking your photo…';
   document.getElementById("proof-progress").hidden = false;
 });
 

@@ -7,16 +7,17 @@ from app.routes import auth, pages, paypal, challenge_pages
 from app.routes.challenges import router as challenges_router
 import asyncio
 from contextlib import asynccontextmanager
-from app.services.loops import check_challenges_ready_for_settlement
+from app.services.loops import check_challenges_ready_for_settlement,sync_challenge_statuses
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async def settle_worker():
+    async def sync_settle_worker():
         while True:
+            await asyncio.to_thread(sync_challenge_statuses)
             await asyncio.to_thread(check_challenges_ready_for_settlement)
             await asyncio.sleep(60)
 
-    task = asyncio.create_task(settle_worker())
+    task = asyncio.create_task(sync_settle_worker())
     yield
     task.cancel()
 
