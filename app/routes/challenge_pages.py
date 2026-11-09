@@ -168,12 +168,17 @@ def challenge_detail_page(
     )
     has_paid = bool(my_participant and my_participant.get("paid"))
     attempts = get_my_evidence(str(challenge_id), str(user["id"])) if has_paid else []
+    voting_open = challenge.get("status") not in ("closed", "settling", "settled", "cancelled")
     pending_votes = (
         get_pending_votes_for_user(str(challenge_id), str(user["id"]), participants)
-        if has_paid
+        if (has_paid and voting_open)
         else []
     )
-    unvoted_count = sum(1 for ev in pending_votes if ev.get("my_vote") is None)
+    unvoted_count = (
+        sum(1 for ev in pending_votes if ev.get("my_vote") is None)
+        if voting_open
+        else 0
+    )
     verification_mode = challenge.get("verification_mode", "ai")
     max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
 
@@ -184,6 +189,7 @@ def challenge_detail_page(
             "user": user,
             "challenge": challenge,
             "has_paid": has_paid,
+            "voting_open": voting_open,
             "is_participant": my_participant is not None,
             "my_outcome": my_participant.get("outcome") if my_participant else None,
             "proof_error": PROOF_ERRORS.get(proof_error),
@@ -381,6 +387,7 @@ def voting_page(
     if not has_paid:
         raise HTTPException(status_code=403, detail="Only paid participants can access voting")
 
+    voting_open = challenge.get("status") not in ("closed", "settling", "settled", "cancelled")
     feed = get_voting_feed(str(challenge_id), str(user["id"]), participants)
     if not feed:
         feed = get_pending_votes_for_user(str(challenge_id), str(user["id"]), participants)
@@ -389,7 +396,11 @@ def voting_page(
         ev for ev in feed
         if not ev.get("is_me") and ev.get("status", "needs_vote") == "needs_vote"
     ]
-    unvoted_count = sum(1 for ev in pending_votes if ev.get("my_vote") is None)
+    unvoted_count = (
+        sum(1 for ev in pending_votes if ev.get("my_vote") is None)
+        if voting_open
+        else 0
+    )
     verification_mode = challenge.get("verification_mode", "ai")
     max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
 
@@ -402,6 +413,7 @@ def voting_page(
             "feed": feed,
             "pending_votes": pending_votes,
             "unvoted_count": unvoted_count,
+            "voting_open": voting_open,
             "vote_success": vote == "success",
             "vote_error": vote_error,
             "max_attempts": max_attempts,

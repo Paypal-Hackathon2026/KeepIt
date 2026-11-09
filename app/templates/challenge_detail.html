@@ -31,7 +31,7 @@
         {% if has_paid %}
           <a href="/challenges/{{ challenge.id }}/voting" target="_blank" class="btn-secondary btn-voting" id="go-to-voting-btn">
             <i class="fa-solid fa-check-to-slot"></i> Go to voting
-            {% if unvoted_count and unvoted_count > 0 %}
+            {% if voting_open and unvoted_count and unvoted_count > 0 %}
               <span class="voting-pill">{{ unvoted_count }}</span>
             {% endif %}
           </a>
@@ -98,7 +98,7 @@
         <p class="field-error"><i class="fa-solid fa-circle-xmark"></i> {{ vote_error }}</p>
       {% endif %}
 
-      {% if unvoted_count and unvoted_count > 0 %}
+      {% if voting_open and unvoted_count and unvoted_count > 0 %}
         <div class="voting-banner">
           <div>
             <strong><i class="fa-solid fa-check-to-slot"></i> Community Voting Active</strong>

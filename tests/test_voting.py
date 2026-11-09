@@ -694,7 +694,10 @@ def test_voting_subpage_renders_proofs_and_modal():
         assert "Reject" in html
         assert f"/evidence/{mock_pending[0]['id']}/vote" in html
         assert 'id="image-modal"' in html
-        assert "Click to enlarge" in html
+        assert "openImageModal" in html
+        assert "vote-photo-clickable" in html
+        assert "photo-zoom-hint" not in html
+        assert "fa-magnifying-glass-plus" not in html
         assert "1 awaiting your vote" in html
 
 
@@ -874,10 +877,83 @@ def test_voting_subpage_chat_layout_me_on_right_others_on_left():
         assert "chat-msg-them" in html
         assert "chat-bubble-them" in html
         assert "Bob Submitter" in html
-        assert "BS" in html
+        assert "Participant" in html
         # Vote buttons are present for other's photo
         assert f"/evidence/{other_evidence_id}/vote" in html
         assert "Approve" in html
         assert "Reject" in html
+
+
+def test_voting_notifications_hidden_when_challenge_is_settling_or_closed():
+    """
+    When a challenge is in settling, closed, or other non-voting status:
+    1. Detail page hides the voting-pill on 'Go to voting' button and the 'Community Voting Active' banner.
+    2. Voting page does not show 'awaiting your vote' pill and displays 'Voting closed'.
+    """
+    challenge_id = uuid.uuid4()
+    other_evidence_id = str(uuid.uuid4())
+
+    for status in ("settling", "closed", "settled", "cancelled"):
+        mock_challenge = {
+            "id": challenge_id,
+            "creator_id": MOCK_USER["id"],
+            "title": "Settling Challenge",
+            "criteria": "Run 5km",
+            "entry_fee_minor": 1000,
+            "pool_minor": 2000,
+            "proof_code": "RUN123",
+            "status": status,
+            "verification_mode": "vote",
+            "voting_deadline": "2026-11-08T10:00:00+00:00",
+            "participants": [
+                {
+                    "user_id": MOCK_USER["id"],
+                    "display_name": "Alice Voter",
+                    "paid": True,
+                    "outcome": "pending",
+                    "joined_at": "2026-11-06T10:00:00+00:00",
+                },
+            ],
+        }
+
+        mock_pending = [
+            {
+                "id": other_evidence_id,
+                "challenge_id": str(challenge_id),
+                "user_id": OTHER_USER_ID,
+                "author_name": "Bob Submitter",
+                "attempt": 1,
+                "photo_url": "https://example.com/bob.jpg",
+                "my_vote": None,  # Not voted yet, but voting is closed!
+                "yes_count": 0,
+                "no_count": 0,
+                "total_votes": 0,
+                "status": "needs_vote",
+                "is_me": False,
+            }
+        ]
+
+        # 1. Detail page check
+        with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+             patch("app.routes.challenge_pages.get_my_evidence", return_value=[]), \
+             patch("app.routes.challenge_pages.get_pending_votes_for_user", return_value=mock_pending):
+
+            resp = client.get(f"/challenges/{challenge_id}")
+            assert resp.status_code == 200
+            assert "voting-pill" not in resp.text
+            assert "Community Voting Active" not in resp.text
+
+        # 2. Voting page check
+        with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+             patch("app.routes.challenge_pages.get_voting_feed", return_value=mock_pending):
+
+            resp = client.get(f"/challenges/{challenge_id}/voting")
+            assert resp.status_code == 200
+            assert "awaiting your vote" not in resp.text
+            assert "Voting closed" in resp.text
+            assert "Voting has concluded." in resp.text
+            # No vote action buttons when closed/settling
+            assert f"/evidence/{other_evidence_id}/vote" not in resp.text
+
 
 
