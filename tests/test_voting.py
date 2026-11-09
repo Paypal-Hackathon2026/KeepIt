@@ -96,7 +96,7 @@ def test_vote_evidence_not_needs_vote():
         "challenge_id": str(uuid.uuid4()),
         "user_id": OTHER_USER_ID,
         "attempt": 1,
-        "status": "approved",
+        "status": "auto_approved",
     }]
     mock_supabase = MagicMock()
     mock_supabase.table.side_effect = make_mock_table(evidence_data=evidence_data)
@@ -107,6 +107,46 @@ def test_vote_evidence_not_needs_vote():
             cast_vote(evidence_id, MOCK_USER["id"], approve=True)
         assert exc_info.value.status_code == 400
         assert "not needs_vote" in exc_info.value.detail
+
+
+def test_voting_other_user_can_vote_after_community_verdict():
+    """
+    When an evidence has achieved community approved status, other participants
+    who have not yet voted can still cast their vote during the voting period.
+    """
+    evidence_id = str(uuid.uuid4())
+    challenge_id = str(uuid.uuid4())
+    voter_2_id = str(uuid.uuid4())
+
+    evidence_data = [{
+        "id": evidence_id,
+        "challenge_id": challenge_id,
+        "user_id": OTHER_USER_ID,
+        "attempt": 1,
+        "status": "approved",
+    }]
+
+    mock_supabase = MagicMock()
+    mock_supabase.table.side_effect = make_mock_table(
+        evidence_data=evidence_data,
+        voter_participant=[{"user_id": MOCK_USER["id"], "paid": True}],
+        paid_participants=[
+            {"user_id": OTHER_USER_ID, "paid": True},
+            {"user_id": MOCK_USER["id"], "paid": True},
+            {"user_id": voter_2_id, "paid": True},
+        ],
+        votes_data=[
+            {"evidence_id": evidence_id, "challenge_id": challenge_id, "voter_id": voter_2_id, "approve": True},
+        ],
+        challenge_data=[
+            {"id": challenge_id, "status": "active", "voting_deadline": None, "verification_mode": "vote"}
+        ],
+    )
+
+    with patch("app.services.evidence.supabase", mock_supabase):
+        result = cast_vote(evidence_id, MOCK_USER["id"], approve=True)
+        assert result["evidence_id"] == evidence_id
+        assert result["approve"] is True
 
 
 def test_vote_author_cannot_vote_on_own_evidence():
@@ -998,8 +1038,8 @@ def test_ai_mode_voting_page_only_shows_needs_vote_photos():
             "author_name": "Bob Runner",
             "is_me": False,
             "attempt": 2,
-            "status": "rejected",
-            "photo_url": "https://example.com/bob_rejected.jpg",
+            "status": "auto_rejected",
+            "photo_url": "https://example.com/bob_auto_rejected.jpg",
             "my_vote": None,
             "yes_count": 0,
             "no_count": 0,
@@ -1019,6 +1059,34 @@ def test_ai_mode_voting_page_only_shows_needs_vote_photos():
             "no_count": 0,
             "total_votes": 0,
         },
+        {
+            "id": str(uuid.uuid4()),
+            "challenge_id": str(challenge_id),
+            "user_id": OTHER_USER_ID,
+            "author_name": "Bob Runner",
+            "is_me": False,
+            "attempt": 4,
+            "status": "approved",
+            "photo_url": "https://example.com/bob_community_approved.jpg",
+            "my_vote": True,
+            "yes_count": 2,
+            "no_count": 0,
+            "total_votes": 2,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "challenge_id": str(challenge_id),
+            "user_id": OTHER_USER_ID,
+            "author_name": "Bob Runner",
+            "is_me": False,
+            "attempt": 5,
+            "status": "rejected",
+            "photo_url": "https://example.com/bob_community_rejected.jpg",
+            "my_vote": False,
+            "yes_count": 0,
+            "no_count": 2,
+            "total_votes": 2,
+        },
     ]
 
     with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
@@ -1028,10 +1096,13 @@ def test_ai_mode_voting_page_only_shows_needs_vote_photos():
         assert resp.status_code == 200
         html = resp.text
 
-        # Only attempt 3 (needs_vote) should be in the feed
+        # Needs_vote, community-approved, and community-rejected should be in the feed
         assert "bob_needs_vote.jpg" in html
+        assert "bob_community_approved.jpg" in html
+        assert "bob_community_rejected.jpg" in html
+        # Auto-approved and auto-rejected must not appear in the feed
         assert "bob_auto_approved.jpg" not in html
-        assert "bob_rejected.jpg" not in html
+        assert "bob_auto_rejected.jpg" not in html
 
 
 def test_group_voting_mode_shows_approved_and_rejected_photos_on_voting_page():
@@ -1171,8 +1242,9 @@ def test_group_voting_mode_does_not_render_ai_arbiter_opinion():
 def test_get_voting_feed_mode_filtering():
     """
     Directly tests get_voting_feed:
-    - verification_mode == 'ai' filters out auto_approved and rejected items.
-    - verification_mode == 'vote' retains all items (approved, rejected, needs_vote).
+    - In AI arbiter mode ('ai'): excludes auto_approved and auto_rejected items;
+      retains pending, needs_vote, approved, and rejected items.
+    - In group vote mode ('vote'): retains all submitted items without exception.
     """
     from app.services.evidence import get_voting_feed
 
@@ -1183,36 +1255,127 @@ def test_get_voting_feed_mode_filtering():
         {"id": "ev-1", "challenge_id": challenge_id, "user_id": "u1", "attempt": 1, "storage_path": "p1", "status": "approved"},
         {"id": "ev-2", "challenge_id": challenge_id, "user_id": "u2", "attempt": 1, "storage_path": "p2", "status": "rejected"},
         {"id": "ev-3", "challenge_id": challenge_id, "user_id": "u3", "attempt": 1, "storage_path": "p3", "status": "needs_vote"},
+        {"id": "ev-4", "challenge_id": challenge_id, "user_id": "u4", "attempt": 1, "storage_path": "p4", "status": "auto_approved"},
+        {"id": "ev-5", "challenge_id": challenge_id, "user_id": "u5", "attempt": 1, "storage_path": "p5", "status": "auto_rejected"},
+        {"id": "ev-6", "challenge_id": challenge_id, "user_id": "u6", "attempt": 1, "storage_path": "p6", "status": "pending"},
     ]
 
-    # In vote mode: returns all 3
-    tbl_vote = MagicMock()
-    tbl_vote.select.return_value.eq.return_value.execute.return_value.data = sample_data
-    tbl_vote.select.return_value.in_.return_value.execute.return_value.data = []
-    mock_supabase.table.return_value = tbl_vote
+    tbl = MagicMock()
+    tbl.select.return_value.eq.return_value.execute.return_value.data = sample_data
+    tbl.select.return_value.in_.return_value.execute.return_value.data = [
+        {"evidence_id": "ev-1", "voter_id": "u2", "approve": True},
+        {"evidence_id": "ev-2", "voter_id": "u1", "approve": False},
+    ]
+    mock_supabase.table.return_value = tbl
     mock_supabase.storage.from_().create_signed_url.return_value = {"signedUrl": "https://url.com"}
 
     with patch("app.services.evidence.supabase", mock_supabase):
-        feed_vote = get_voting_feed(challenge_id, "u1", verification_mode="vote")
-        assert len(feed_vote) == 3
-        statuses = [item["status"] for item in feed_vote]
-        assert "approved" in statuses
-        assert "rejected" in statuses
-        assert "needs_vote" in statuses
+        # AI mode: strictly needs_vote, community-approved, community-rejected
+        feed_ai = get_voting_feed(challenge_id, "u1", verification_mode="ai")
+        feed_ids_ai = [item["id"] for item in feed_ai]
+        assert "ev-1" in feed_ids_ai
+        assert "ev-2" in feed_ids_ai
+        assert "ev-3" in feed_ids_ai
+        assert "ev-4" not in feed_ids_ai
+        assert "ev-5" not in feed_ids_ai
+        assert "ev-6" not in feed_ids_ai
 
-    # In AI mode: query filters with .eq("status", "needs_vote")
-    tbl_ai = MagicMock()
-    tbl_ai.select.return_value.eq.return_value.eq.return_value.execute.return_value.data = [
-        sample_data[2]  # only ev-3
+        # Vote mode (vote only): all photos displayed
+        feed_vote = get_voting_feed(challenge_id, "u1", verification_mode="vote")
+        assert len(feed_vote) == 6
+        feed_ids_vote = [item["id"] for item in feed_vote]
+        assert "ev-1" in feed_ids_vote
+        assert "ev-2" in feed_ids_vote
+        assert "ev-3" in feed_ids_vote
+        assert "ev-4" in feed_ids_vote
+        assert "ev-5" in feed_ids_vote
+        assert "ev-6" in feed_ids_vote
+
+
+def test_vote_only_challenge_first_user_photo_visible_and_votable_by_subsequent_users():
+    """
+    When user 1 uploads in vote-only challenge:
+    - Status is 'needs_vote' (not auto_approved, not immediately verified).
+    - Their photo is visible in the voting feed for other participants.
+    - Subsequent participants can vote on it.
+    - Even if a photo in vote mode has 'auto_approved' from a prior bug,
+      it still appears and other participants can vote on it.
+    """
+    challenge_id = uuid.uuid4()
+    mock_challenge = {
+        "id": challenge_id,
+        "creator_id": OTHER_USER_ID,
+        "title": "Community Vote Challenge",
+        "criteria": "Run 5k",
+        "verification_mode": "vote",
+        "status": "active",
+        "entry_fee_minor": 1000,
+        "pool_minor": 2000,
+        "participants": [
+            {"user_id": OTHER_USER_ID, "paid": True, "display_name": "Bob First"},
+            {"user_id": MOCK_USER["id"], "paid": True, "display_name": "Alice Voter"},
+        ],
+    }
+
+    evidence_id = str(uuid.uuid4())
+    mock_feed = [
+        {
+            "id": evidence_id,
+            "challenge_id": str(challenge_id),
+            "user_id": OTHER_USER_ID,
+            "author_name": "Bob First",
+            "is_me": False,
+            "attempt": 1,
+            "status": "needs_vote",
+            "photo_url": "https://example.com/bob_proof.jpg",
+            "my_vote": None,
+            "yes_count": 0,
+            "no_count": 0,
+            "total_votes": 0,
+        }
     ]
-    tbl_ai.select.return_value.in_.return_value.execute.return_value.data = []
-    mock_supabase.table.return_value = tbl_ai
+
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.challenge_pages.get_voting_feed", return_value=mock_feed):
+
+        resp = client.get(f"/challenges/{challenge_id}/voting")
+        assert resp.status_code == 200
+        assert "bob_proof.jpg" in resp.text
+        assert f"/evidence/{evidence_id}/vote" in resp.text
+
+    # Verify that cast_vote allows voting on vote-mode evidence even if status was auto_approved
+    legacy_auto_approved_ev_id = str(uuid.uuid4())
+    evidence_data = [{
+        "id": legacy_auto_approved_ev_id,
+        "challenge_id": str(challenge_id),
+        "user_id": OTHER_USER_ID,
+        "attempt": 1,
+        "status": "auto_approved",
+    }]
+
+    mock_supabase = MagicMock()
+    mock_supabase.table.side_effect = make_mock_table(
+        evidence_data=evidence_data,
+        voter_participant=[{"user_id": MOCK_USER["id"], "paid": True}],
+        paid_participants=[
+            {"user_id": OTHER_USER_ID, "paid": True},
+            {"user_id": MOCK_USER["id"], "paid": True},
+            {"user_id": str(uuid.uuid4()), "paid": True},
+        ],
+        challenge_data=[{
+            "id": str(challenge_id),
+            "status": "active",
+            "verification_mode": "vote",
+            "voting_deadline": None,
+        }],
+    )
 
     with patch("app.services.evidence.supabase", mock_supabase):
-        feed_ai = get_voting_feed(challenge_id, "u1", verification_mode="ai")
-        assert len(feed_ai) == 1
-        assert feed_ai[0]["id"] == "ev-3"
-        assert feed_ai[0]["status"] == "needs_vote"
+        res = cast_vote(legacy_auto_approved_ev_id, MOCK_USER["id"], approve=True)
+        assert res["approve"] is True
+        assert res["evidence_id"] == legacy_auto_approved_ev_id
+
+
 
 
 

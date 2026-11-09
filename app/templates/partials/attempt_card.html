@@ -16,7 +16,7 @@
       <p class="verdict-result verdict-ok"><i class="fa-solid fa-circle-check"></i> Verified</p>
     {% elif a.status == "needs_vote" %}
       <p class="verdict-result verdict-vote"><i class="fa-solid fa-users"></i> Needs voting</p>
-    {% elif a.status == "rejected" %}
+    {% elif a.status in ["rejected", "auto_rejected"] %}
       <p class="verdict-result verdict-no"><i class="fa-solid fa-circle-xmark"></i> Rejected</p>
     {% else %}
       <p class="verdict-result verdict-pending"><i class="fa-solid fa-hourglass-half"></i> Checking</p>

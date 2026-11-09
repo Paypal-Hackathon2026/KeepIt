@@ -197,7 +197,9 @@
                         <span class="badge-voted-no"><i class="fa-solid fa-circle-xmark"></i> Rejected by community</span>
                       {% endif %}
                     </div>
-                  {% elif challenge.status not in ['closed', 'settling', 'settled', 'cancelled'] %}
+                  {% endif %}
+
+                  {% if challenge.status not in ['closed', 'settling', 'settled', 'cancelled'] %}
                     <div class="vote-actions">
                       <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-form">
                         <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">

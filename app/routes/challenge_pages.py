@@ -169,9 +169,12 @@ def challenge_detail_page(
     )
     has_paid = bool(my_participant and my_participant.get("paid"))
     attempts = get_my_evidence(str(challenge_id), str(user["id"])) if has_paid else []
+    verification_mode = challenge.get("verification_mode", "ai")
     voting_open = challenge.get("status") not in ("closed", "settling", "settled", "cancelled")
     pending_votes = (
-        get_pending_votes_for_user(str(challenge_id), str(user["id"]), participants)
+        get_pending_votes_for_user(
+            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode
+        )
         if (has_paid and voting_open)
         else []
     )
@@ -180,7 +183,6 @@ def challenge_detail_page(
         if voting_open
         else 0
     )
-    verification_mode = challenge.get("verification_mode", "ai")
     max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
 
     ALLOWED_STATUSES = ["active", "closed", "voting"]
@@ -201,7 +203,7 @@ def challenge_detail_page(
             "is_participant": my_participant is not None,
             "my_outcome": my_participant.get("outcome") if my_participant else None,
             "proof_error": PROOF_ERRORS.get(proof_error),
-            "proof_uploaded": proof in ("uploaded", "needs_vote", "auto_approved"),
+            "proof_uploaded": proof in ("uploaded", "needs_vote", "auto_approved", "auto_rejected"),
             "proof_status": proof,
             "proof_result": proof,
             "proof_sent_to_vote": proof == "sent_to_vote",
@@ -329,12 +331,8 @@ def upload_evidence(
     paid_participants = [p for p in challenge.get("participants", []) if p.get("paid")]
 
     if verification_mode == "vote":
-        if len(paid_participants) <= 1:
-            initial_status = "auto_approved"
-            proof_param = "proof=auto_approved"
-        else:
-            initial_status = "needs_vote"
-            proof_param = "proof=needs_vote"
+        initial_status = "needs_vote"
+        proof_param = "proof=needs_vote"
     else:
         initial_status = "pending"
         proof_param = "proof=uploaded"
@@ -353,8 +351,6 @@ def upload_evidence(
         return RedirectResponse(f"{back}?proof_error=not_image", status_code=303)
 
     if verification_mode == "vote":
-        if initial_status == "auto_approved":
-            mark_verified(str(challenge_id), str(user["id"]))
         return RedirectResponse(f"{back}?{proof_param}", status_code=303)
 
     try:
@@ -364,7 +360,7 @@ def upload_evidence(
         set_status(evidence["id"], status)
         if status == "auto_approved":
             mark_verified(str(challenge_id), str(user["id"]))
-        elif status == "rejected" and evidence["attempt"] == MAX_ATTEMPTS:
+        elif status in ("rejected", "auto_rejected") and evidence["attempt"] == max_attempts:
             mark_forfeited(str(challenge_id), str(user["id"]))
     except Exception:
         send_to_vote(evidence["id"])
@@ -408,7 +404,7 @@ def voting_page(
     if not has_paid:
         raise HTTPException(status_code=403, detail="Only paid participants can access voting")
 
-    verification_mode = challenge.get("verification_mode", "ai")
+    verification_mode = challenge.get("verification_mode") or "ai"
     voting_open = challenge.get("status") not in ("closed", "settling", "settled", "cancelled")
     feed = get_voting_feed(
         str(challenge_id),
@@ -416,14 +412,31 @@ def voting_page(
         participants,
         verification_mode=verification_mode,
     )
-    if verification_mode != "vote" and feed:
-        feed = [ev for ev in feed if ev.get("status") == "needs_vote"]
-    elif not feed:
-        feed = get_pending_votes_for_user(str(challenge_id), str(user["id"]), participants)
+    if not feed:
+        feed = get_pending_votes_for_user(
+            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode
+        )
+
+    if feed and verification_mode != "vote":
+        feed = [
+            ev for ev in feed
+            if (
+                ev.get("status") == "needs_vote"
+                or (
+                    ev.get("status") in ("approved", "rejected")
+                    and ev.get("status") not in (
+                        "auto_approved", "auto-approved", "auto approved",
+                        "auto_rejected", "auto-rejected", "auto rejected",
+                        "pending"
+                    )
+                    and (ev.get("total_votes", 0) > 0 or ev.get("yes_count", 0) > 0 or ev.get("no_count", 0) > 0)
+                )
+            )
+        ]
 
     pending_votes = [
         ev for ev in feed
-        if not ev.get("is_me") and ev.get("status", "needs_vote") == "needs_vote"
+        if not ev.get("is_me")
     ]
     unvoted_count = (
         sum(1 for ev in pending_votes if ev.get("my_vote") is None)

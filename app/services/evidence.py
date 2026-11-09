@@ -1,9 +1,12 @@
+import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from app.db import supabase
 from app.services.images import to_jpeg
+
+logger = logging.getLogger(__name__)
 
 BUCKET = "evidence"
 MAX_ATTEMPTS = 3
@@ -137,39 +140,58 @@ def get_voting_feed(
     the voting view.
     Includes both the current user's evidence (is_me=True, shown on right)
     and other participants' evidence (is_me=False, shown on left with voting options).
-    For AI arbiter challenges (verification_mode != 'vote'), only evidence marked as
-    'needs_vote' is included (auto_approved and rejected photos are excluded).
+    For AI arbiter challenges (verification_mode != 'vote'), only evidence sent to community
+    voting is included (they stay in the feed even after receiving community approved/rejected status).
+    Photos auto-approved or rejected directly by the AI arbiter are excluded.
+    For group vote challenges, all submitted photos are included and stay in the feed.
     """
     try:
-        if verification_mode is None:
+        query = (
+            supabase.table("evidence")
+            .select("id, challenge_id, user_id, attempt, storage_path, status")
+            .eq("challenge_id", challenge_id)
+        )
+
+        result = query.execute()
+        raw_items = result.data or []
+        if not raw_items:
+            return []
+
+        if not verification_mode:
             try:
-                c_res = supabase.table("challenges").select("verification_mode").eq("id", challenge_id).execute()
-                if c_res.data:
-                    verification_mode = c_res.data[0].get("verification_mode", "ai")
-                else:
-                    verification_mode = "ai"
+                c_res = (
+                    supabase.table("challenges")
+                    .select("verification_mode")
+                    .eq("id", challenge_id)
+                    .execute()
+                )
+                if c_res.data and isinstance(c_res.data, list):
+                    verification_mode = c_res.data[0].get("verification_mode") or "ai"
             except Exception:
                 verification_mode = "ai"
 
-        query = (
-            supabase.table("evidence")
-            .select("id, challenge_id, user_id, attempt, storage_path, status, created_at")
-            .eq("challenge_id", challenge_id)
-        )
-        if verification_mode != "vote":
-            query = query.eq("status", "needs_vote")
-
-        result = query.execute()
-        items = result.data or []
-        if verification_mode != "vote":
-            items = [item for item in items if item.get("status") == "needs_vote"]
-
+        is_vote_only = (verification_mode == "vote")
+        if is_vote_only:
+            # For vote-only challenges, all submitted photos are shown
+            items = list(raw_items)
+        else:
+            # Filter out auto_approved, auto_rejected and pending photos from AI arbiter voting feed
+            items = [
+                item for item in raw_items
+                if item.get("status") not in (
+                    "auto_approved", "auto-approved", "auto approved",
+                    "auto_rejected", "auto-rejected", "auto rejected",
+                    "pending"
+                )
+            ]
         if not items:
             return []
 
-        # Sort chronologically if created_at is present, otherwise retain insertion order
+        # Sort chronologically if created_at is present, otherwise retain attempt order
         if items and items[0].get("created_at"):
             items.sort(key=lambda x: x.get("created_at") or "")
+        else:
+            items.sort(key=lambda x: x.get("attempt", 1))
 
         names_map = {}
         if participants:
@@ -206,8 +228,29 @@ def get_voting_feed(
         for v in all_votes:
             votes_by_ev[str(v.get("evidence_id"))].append(v)
 
+        result_items = []
         for item in items:
             ev_id = str(item["id"])
+            st = str(item.get("status", "")).strip().lower()
+            ev_votes = votes_by_ev[ev_id]
+            total_votes = len(ev_votes)
+
+            if not is_vote_only:
+                # In AI arbiter challenges, ONLY show:
+                # - 'needs_vote'
+                # - 'approved' with community votes
+                # - 'rejected' with community votes
+                if st in (
+                    "auto_approved", "auto-approved", "auto approved",
+                    "auto_rejected", "auto-rejected", "auto rejected",
+                    "pending"
+                ):
+                    continue
+                if st in ("approved", "rejected") and total_votes == 0:
+                    continue
+                if st not in ("needs_vote", "approved", "rejected"):
+                    continue
+
             try:
                 signed_url = supabase.storage.from_(BUCKET).create_signed_url(
                     item["storage_path"], 3600
@@ -216,23 +259,24 @@ def get_voting_feed(
             except Exception:
                 item["photo_url"] = None
 
-            ev_votes = votes_by_ev[ev_id]
             is_me = (str(item.get("user_id")) == str(user_id))
             item["is_me"] = is_me
 
             author_name = "You" if is_me else names_map.get(str(item.get("user_id")), "Participant")
             item["author_name"] = author_name
             item["avatar_initials"] = _make_initials(author_name if not is_me else "You")
-            item["total_votes"] = len(ev_votes)
+            item["total_votes"] = total_votes
             item["yes_count"] = sum(1 for v in ev_votes if v.get("approve"))
             item["no_count"] = sum(1 for v in ev_votes if not v.get("approve"))
             item["my_vote"] = next(
                 (v["approve"] for v in ev_votes if str(v.get("voter_id")) == str(user_id)),
                 None,
             )
+            result_items.append(item)
 
-        return items
-    except Exception:
+        return result_items
+    except Exception as e:
+        logger.exception("Error in get_voting_feed: %s", e)
         return []
 
 
@@ -240,80 +284,10 @@ def get_pending_votes_for_user(
     challenge_id: str,
     user_id: str,
     participants: list[dict] | None = None,
+    verification_mode: str | None = None,
 ) -> list[dict]:
-    try:
-        result = (
-            supabase.table("evidence")
-            .select("id, challenge_id, user_id, attempt, storage_path, status")
-            .eq("challenge_id", challenge_id)
-            .eq("status", "needs_vote")
-            .execute()
-        )
-        items = [row for row in (result.data or []) if str(row.get("user_id")) != str(user_id)]
-        if not items:
-            return []
-
-        names_map = {}
-        if participants:
-            for p in participants:
-                names_map[str(p.get("user_id"))] = p.get("display_name") or "Participant"
-
-        missing_ids = [str(item["user_id"]) for item in items if str(item["user_id"]) not in names_map]
-        if missing_ids:
-            try:
-                prof_res = (
-                    supabase.table("profiles")
-                    .select("id, display_name")
-                    .in_("id", missing_ids)
-                    .execute()
-                )
-                for prof in (prof_res.data or []):
-                    names_map[str(prof["id"])] = prof.get("display_name") or "Participant"
-            except Exception:
-                pass
-
-        evidence_ids = [item["id"] for item in items]
-        try:
-            votes_res = (
-                supabase.table("votes")
-                .select("evidence_id, voter_id, approve")
-                .in_("evidence_id", evidence_ids)
-                .execute()
-            )
-            all_votes = votes_res.data or []
-        except Exception:
-            all_votes = []
-
-        votes_by_ev = defaultdict(list)
-        for v in all_votes:
-            votes_by_ev[str(v.get("evidence_id"))].append(v)
-
-        for item in items:
-            ev_id = str(item["id"])
-            try:
-                signed_url = supabase.storage.from_(BUCKET).create_signed_url(
-                    item["storage_path"], 3600
-                )
-                item["photo_url"] = signed_url.get("signedURL") or signed_url.get("signedUrl")
-            except Exception:
-                item["photo_url"] = None
-
-            ev_votes = votes_by_ev[ev_id]
-            author_name = names_map.get(str(item.get("user_id")), "Participant")
-            item["author_name"] = author_name
-            item["is_me"] = False
-            item["avatar_initials"] = _make_initials(author_name)
-            item["total_votes"] = len(ev_votes)
-            item["yes_count"] = sum(1 for v in ev_votes if v.get("approve"))
-            item["no_count"] = sum(1 for v in ev_votes if not v.get("approve"))
-            item["my_vote"] = next(
-                (v["approve"] for v in ev_votes if str(v.get("voter_id")) == str(user_id)),
-                None,
-            )
-
-        return items
-    except Exception:
-        return []
+    feed = get_voting_feed(challenge_id, user_id, participants, verification_mode=verification_mode)
+    return [ev for ev in feed if not ev.get("is_me")]
 
 
 def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
@@ -329,12 +303,6 @@ def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
     evidence = ev_res.data[0]
     challenge_id = str(evidence["challenge_id"])
     author_id = str(evidence["user_id"])
-
-    if evidence.get("status") != "needs_vote":
-        raise HTTPException(
-            status_code=400,
-            detail="Voting is not open for this evidence (status is not needs_vote)",
-        )
 
     if str(voter_id) == author_id:
         raise HTTPException(
@@ -379,6 +347,12 @@ def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
         raise
     except Exception:
         pass
+
+    if verification_mode != "vote" and evidence.get("status") in ("auto_approved", "auto_rejected"):
+        raise HTTPException(
+            status_code=400,
+            detail="Voting is not open for this evidence (status is not needs_vote)",
+        )
 
     voter_res = (
         supabase.table("participants")

@@ -17,7 +17,7 @@
     {% else %}
       <p class="field-error">The AI Arbiter wasn't sure, so your photo goes to a group vote.</p>
     {% endif %}
-  {% elif proof_result == "rejected" %}
+  {% elif proof_result in ["rejected", "auto_rejected"] %}
     <p class="field-error">Your proof was rejected. Try another photo.</p>
   {% elif proof_uploaded %}
     <p class="field-success">Photo uploaded!</p>
