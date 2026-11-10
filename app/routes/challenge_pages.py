@@ -255,9 +255,10 @@ def challenge_detail_page(
         join_dl = join_dl.replace(tzinfo=timezone.utc)
     is_after_join = (not join_dl) or (now >= join_dl)
     voting_open = is_after_join and challenge.get("status") in ("active", "voting")
+    user_tz = request.cookies.get("user_timezone")
     pending_votes = (
         get_pending_votes_for_user(
-            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode
+            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode, user_tz=user_tz
         )
         if (has_paid and voting_open)
         else []
@@ -515,15 +516,17 @@ def voting_page(
     is_after_join = (not join_dl) or (now >= join_dl)
     voting_started = is_after_join and challenge.get("status") != "open"
     voting_open = voting_started and challenge.get("status") in ("active", "voting")
+    user_tz = request.cookies.get("user_timezone")
     feed = get_voting_feed(
         str(challenge_id),
         str(user["id"]),
         participants,
         verification_mode=verification_mode,
+        user_tz=user_tz,
     )
     if not feed:
         feed = get_pending_votes_for_user(
-            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode
+            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode, user_tz=user_tz
         )
 
     if feed and verification_mode != "vote":
@@ -601,6 +604,15 @@ async def vote_on_evidence(
                 approve = bool(raw_val)
 
     from urllib.parse import quote_plus
+
+    def _split_anchor(url: str) -> tuple[str, str]:
+        """Split a URL into (path, '#anchor') parts, stripping any query string."""
+        no_query = url.split("?")[0]
+        if "#" in no_query:
+            path, anchor = no_query.split("#", 1)
+            return path, f"#{anchor}"
+        return no_query, ""
+
     try:
         result = cast_vote(str(evidence_id), str(user["id"]), approve)
     except HTTPException as e:
@@ -609,9 +621,9 @@ async def vote_on_evidence(
         if "application/json" in accept or "application/json" in content_type:
             raise
         if return_to and str(return_to).startswith("/challenges/"):
-            target_path = str(return_to).split("?")[0]
+            base_path, anchor = _split_anchor(str(return_to))
             return RedirectResponse(
-                url=f"{target_path}?vote_error={quote_plus(str(e.detail))}",
+                url=f"{base_path}?vote_error={quote_plus(str(e.detail))}{anchor}",
                 status_code=303,
             )
         raise
@@ -621,9 +633,9 @@ async def vote_on_evidence(
         if "application/json" in accept or "application/json" in content_type:
             raise HTTPException(status_code=400, detail=str(e))
         if return_to and str(return_to).startswith("/challenges/"):
-            target_path = str(return_to).split("?")[0]
+            base_path, anchor = _split_anchor(str(return_to))
             return RedirectResponse(
-                url=f"{target_path}?vote_error={quote_plus(str(e))}",
+                url=f"{base_path}?vote_error={quote_plus(str(e))}{anchor}",
                 status_code=303,
             )
         raise HTTPException(status_code=400, detail=str(e))
@@ -636,9 +648,9 @@ async def vote_on_evidence(
         return result
 
     if return_to and str(return_to).startswith("/challenges/"):
-        target_path = str(return_to).split("?")[0]
+        base_path, anchor = _split_anchor(str(return_to))
         return RedirectResponse(
-            url=f"{target_path}?vote=success",
+            url=f"{base_path}?vote=success{anchor}",
             status_code=303,
         )
 

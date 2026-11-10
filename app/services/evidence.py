@@ -76,14 +76,24 @@ def send_to_vote(evidence_id: str) -> None:
     supabase.table("evidence").update({"status": "needs_vote"}).eq("id", evidence_id).execute()
 
 def get_my_evidence(challenge_id: str, user_id: str) -> list[dict]:
-    result = (
-        supabase.table("evidence")
-        .select("attempt, status, storage_path, verdicts(verified, confidence, reasoning, fraud_flags)")
-        .eq("challenge_id", challenge_id)
-        .eq("user_id", user_id)
-        .order("attempt", desc=True)
-        .execute()
-    )
+    try:
+        result = (
+            supabase.table("evidence")
+            .select("attempt, status, storage_path, created_at, verdicts(verified, confidence, reasoning, fraud_flags)")
+            .eq("challenge_id", challenge_id)
+            .eq("user_id", user_id)
+            .order("attempt", desc=True)
+            .execute()
+        )
+    except Exception:
+        result = (
+            supabase.table("evidence")
+            .select("attempt, status, storage_path, verdicts(verified, confidence, reasoning, fraud_flags)")
+            .eq("challenge_id", challenge_id)
+            .eq("user_id", user_id)
+            .order("attempt", desc=True)
+            .execute()
+        )
 
     attempts = result.data or []
     for row in attempts:
@@ -129,11 +139,40 @@ def _make_initials(name: str) -> str:
     return name[:2].upper()
 
 
+def _format_timestamp(value, user_tz: str | None = None) -> str:
+    """Turn an ISO datetime string or datetime object into a readable local string (YYYY-MM-DD HH:MM)."""
+    if not value:
+        return ""
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except Exception:
+            return str(value).replace("T", " ")[:16]
+    if isinstance(value, datetime):
+        tz = None
+        if user_tz:
+            try:
+                from zoneinfo import ZoneInfo
+                tz = ZoneInfo(user_tz.strip())
+            except Exception:
+                tz = None
+        if tz is not None:
+            if value.tzinfo is not None:
+                value = value.astimezone(tz)
+            else:
+                value = value.replace(tzinfo=timezone.utc).astimezone(tz)
+        elif value.tzinfo is not None:
+            value = value.astimezone(timezone.utc)
+        return value.strftime("%Y-%m-%d %H:%M")
+    return str(value).replace("T", " ")[:16]
+
+
 def get_voting_feed(
     challenge_id: str,
     user_id: str,
     participants: list[dict] | None = None,
     verification_mode: str | None = None,
+    user_tz: str | None = None,
 ) -> list[dict]:
     """
     Returns submitted evidence for a challenge chronologically formatted for
@@ -146,14 +185,29 @@ def get_voting_feed(
     For group vote challenges, all submitted photos are included and stay in the feed.
     """
     try:
-        query = (
-            supabase.table("evidence")
-            .select("id, challenge_id, user_id, attempt, storage_path, status")
-            .eq("challenge_id", challenge_id)
-        )
+        raw_items = []
+        try:
+            query = (
+                supabase.table("evidence")
+                .select("id, challenge_id, user_id, attempt, storage_path, status, created_at")
+                .eq("challenge_id", challenge_id)
+            )
+            ordered_query = query.order("created_at", desc=False)
+            res = ordered_query.execute()
+            if res and isinstance(res.data, list):
+                raw_items = res.data
+            else:
+                res = query.execute()
+                raw_items = res.data or []
+        except Exception:
+            query = (
+                supabase.table("evidence")
+                .select("id, challenge_id, user_id, attempt, storage_path, status")
+                .eq("challenge_id", challenge_id)
+            )
+            res = query.execute()
+            raw_items = res.data or []
 
-        result = query.execute()
-        raw_items = result.data or []
         if not raw_items:
             return []
 
@@ -187,11 +241,18 @@ def get_voting_feed(
         if not items:
             return []
 
-        # Sort chronologically if created_at is present, otherwise retain attempt order
-        if items and items[0].get("created_at"):
-            items.sort(key=lambda x: x.get("created_at") or "")
-        else:
-            items.sort(key=lambda x: x.get("attempt", 1))
+        # Sort strictly chronologically by created_at; fallback to attempt/id if created_at is absent
+        def _sort_key(x):
+            ca = x.get("created_at")
+            if isinstance(ca, datetime):
+                if ca.tzinfo is None:
+                    ca = ca.replace(tzinfo=timezone.utc)
+                return (ca.isoformat(), x.get("attempt", 1), str(x.get("id", "")))
+            if isinstance(ca, str) and ca:
+                return (ca, x.get("attempt", 1), str(x.get("id", "")))
+            return ("", x.get("attempt", 1), str(x.get("id", "")))
+
+        items.sort(key=_sort_key)
 
         names_map = {}
         if participants:
@@ -265,6 +326,9 @@ def get_voting_feed(
             author_name = "You" if is_me else names_map.get(str(item.get("user_id")), "Participant")
             item["author_name"] = author_name
             item["avatar_initials"] = _make_initials(author_name if not is_me else "You")
+            created_at_raw = item.get("created_at")
+            item["created_at"] = created_at_raw
+            item["created_at_fmt"] = _format_timestamp(created_at_raw, user_tz) if created_at_raw else None
             item["total_votes"] = total_votes
             item["yes_count"] = sum(1 for v in ev_votes if v.get("approve"))
             item["no_count"] = sum(1 for v in ev_votes if not v.get("approve"))
@@ -285,8 +349,11 @@ def get_pending_votes_for_user(
     user_id: str,
     participants: list[dict] | None = None,
     verification_mode: str | None = None,
+    user_tz: str | None = None,
 ) -> list[dict]:
-    feed = get_voting_feed(challenge_id, user_id, participants, verification_mode=verification_mode)
+    feed = get_voting_feed(
+        challenge_id, user_id, participants, verification_mode=verification_mode, user_tz=user_tz
+    )
     return [ev for ev in feed if not ev.get("is_me")]
 
 

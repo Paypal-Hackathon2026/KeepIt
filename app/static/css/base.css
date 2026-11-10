@@ -169,13 +169,18 @@ body {
   font-size: 14px;
   font-weight: 600;
   color: var(--blue);
-  text-decoration: underline;
+  text-decoration: none;
   text-align: left;
   display: block;
 }
 
+.avatar-link:visited {
+  color: var(--blue);
+}
+
 .avatar-link:hover {
   color: var(--blue-dark);
+  text-decoration: underline;
 }
 
 .link-button {
@@ -186,9 +191,14 @@ body {
   font-size: 14px;
   font-weight: 600;
   color: var(--blue);
-  text-decoration: underline;
+  text-decoration: none;
   cursor: pointer;
   text-align: left;
+}
+
+.link-button:hover {
+  color: var(--blue-dark);
+  text-decoration: underline;
 }
 
 .page {
@@ -215,4 +225,15 @@ html, body {
   color: var(--green);
   font-size: 14px;
   font-weight: 600;
+}
+
+.back-link {
+  color: var(--blue);
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.back-link:hover {
+  text-decoration: underline;
 }
