@@ -187,11 +187,8 @@ def get_voting_feed(
         if not items:
             return []
 
-        # Sort chronologically if created_at is present, otherwise retain attempt order
-        if items and items[0].get("created_at"):
-            items.sort(key=lambda x: x.get("created_at") or "")
-        else:
-            items.sort(key=lambda x: x.get("attempt", 1))
+        # Sort by attempt number to maintain stable chronological order
+        items.sort(key=lambda x: (str(x.get("user_id", "")), x.get("attempt", 1)))
 
         names_map = {}
         if participants:

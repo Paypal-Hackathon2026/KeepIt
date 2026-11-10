@@ -191,7 +191,7 @@
               {% if voting_open %}
                 <div class="vote-side-actions">
                   <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-side-form">
-                    <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">
+                    <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting#vote-card-{{ ev.id }}">
                     <input type="hidden" name="approve" value="true">
                     <button type="submit"
                             class="btn-side-vote btn-side-vote-approve {% if ev.my_vote is true %}active{% elif ev.my_vote is false %}inactive{% endif %}"
@@ -201,7 +201,7 @@
                   </form>
 
                   <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-side-form">
-                    <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">
+                    <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting#vote-card-{{ ev.id }}">
                     <input type="hidden" name="approve" value="false">
                     <button type="submit"
                             class="btn-side-vote btn-side-vote-reject {% if ev.my_vote is false %}active{% elif ev.my_vote is true %}inactive{% endif %}"

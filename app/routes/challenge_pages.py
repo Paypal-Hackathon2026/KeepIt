@@ -601,6 +601,15 @@ async def vote_on_evidence(
                 approve = bool(raw_val)
 
     from urllib.parse import quote_plus
+
+    def _split_anchor(url: str) -> tuple[str, str]:
+        """Split a URL into (path, '#anchor') parts, stripping any query string."""
+        no_query = url.split("?")[0]
+        if "#" in no_query:
+            path, anchor = no_query.split("#", 1)
+            return path, f"#{anchor}"
+        return no_query, ""
+
     try:
         result = cast_vote(str(evidence_id), str(user["id"]), approve)
     except HTTPException as e:
@@ -609,9 +618,9 @@ async def vote_on_evidence(
         if "application/json" in accept or "application/json" in content_type:
             raise
         if return_to and str(return_to).startswith("/challenges/"):
-            target_path = str(return_to).split("?")[0]
+            base_path, anchor = _split_anchor(str(return_to))
             return RedirectResponse(
-                url=f"{target_path}?vote_error={quote_plus(str(e.detail))}",
+                url=f"{base_path}?vote_error={quote_plus(str(e.detail))}{anchor}",
                 status_code=303,
             )
         raise
@@ -621,9 +630,9 @@ async def vote_on_evidence(
         if "application/json" in accept or "application/json" in content_type:
             raise HTTPException(status_code=400, detail=str(e))
         if return_to and str(return_to).startswith("/challenges/"):
-            target_path = str(return_to).split("?")[0]
+            base_path, anchor = _split_anchor(str(return_to))
             return RedirectResponse(
-                url=f"{target_path}?vote_error={quote_plus(str(e))}",
+                url=f"{base_path}?vote_error={quote_plus(str(e))}{anchor}",
                 status_code=303,
             )
         raise HTTPException(status_code=400, detail=str(e))
@@ -636,9 +645,9 @@ async def vote_on_evidence(
         return result
 
     if return_to and str(return_to).startswith("/challenges/"):
-        target_path = str(return_to).split("?")[0]
+        base_path, anchor = _split_anchor(str(return_to))
         return RedirectResponse(
-            url=f"{target_path}?vote=success",
+            url=f"{base_path}?vote=success{anchor}",
             status_code=303,
         )
 
