@@ -18,10 +18,8 @@ MOCK_USER = {
 
 
 @pytest.fixture(autouse=True)
-def override_user():
-    app.dependency_overrides[current_user] = lambda: MOCK_USER
-    yield
-    app.dependency_overrides.clear()
+def override_user(monkeypatch):
+    monkeypatch.setitem(app.dependency_overrides, current_user, lambda: MOCK_USER)
 
 
 def test_challenge_state_not_found():
@@ -134,4 +132,3 @@ def test_challenge_detail_page_has_htmx_trigger():
         assert 'hx-trigger="every 3s"' in html
         assert 'hx-swap="innerHTML"' in html
         assert "Payment History" in html
-

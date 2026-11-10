@@ -157,7 +157,8 @@ def test_upload_evidence_blocked_when_proof_deadline_passed():
     img.save(buf, format="JPEG")
     fake_photo = buf.getvalue()
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_voting):
+    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_voting), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=[]):
         resp = client.post(
             f"/challenges/{challenge_id}/evidence",
             files={"photo": ("proof.jpg", fake_photo, "image/jpeg")},

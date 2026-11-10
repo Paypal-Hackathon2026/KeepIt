@@ -209,6 +209,7 @@ def test_upload_evidence_vote_mode_single_participant_needs_vote():
     fake_photo_bytes = buf.getvalue()
 
     with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=[]), \
          patch("app.routes.challenge_pages.save_evidence", return_value=({"id": str(uuid.uuid4()), "attempt": 1}, fake_photo_bytes)) as mock_save_evidence, \
          patch("app.routes.challenge_pages.mark_verified") as mock_mark_verified:
 
@@ -267,6 +268,7 @@ def test_upload_evidence_vote_mode_multiple_participants_needs_vote():
     fake_photo_bytes = buf.getvalue()
 
     with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=[]), \
          patch("app.routes.challenge_pages.save_evidence", return_value=({"id": str(uuid.uuid4()), "attempt": 1}, fake_photo_bytes)) as mock_save_evidence:
 
         resp = client.post(
@@ -330,6 +332,7 @@ def test_upload_evidence_ai_mode_calls_judge():
     )
 
     with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.challenge_pages.get_my_evidence", return_value=[]), \
          patch("app.routes.challenge_pages.save_evidence", return_value=({"id": str(uuid.uuid4()), "attempt": 1}, fake_photo_bytes)) as mock_save_evidence, \
          patch("app.routes.challenge_pages.judge", return_value=(mock_verdict, "gemini-test")), \
          patch("app.routes.challenge_pages.save_verdict"), \
@@ -347,4 +350,3 @@ def test_upload_evidence_ai_mode_calls_judge():
 
         mock_save_evidence.assert_called_once()
         mock_mark_verified.assert_called_once_with(str(challenge_id), str(MOCK_USER["id"]))
-

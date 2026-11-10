@@ -9,4 +9,3 @@ pydantic
 pillow
 itsdangerous
 python-dotenv
-pytest
