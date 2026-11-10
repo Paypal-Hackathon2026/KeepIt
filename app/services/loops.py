@@ -25,6 +25,15 @@ def check_challenges_ready_for_settlement():
              .in_("status", ["closed"])
              .execute())
         for row in due.data or []:
+            ch_id=row["id"]
+            failed_payouts=(supabase.table("payouts")
+                            .select("id")
+                            .eq("challenge_id", ch_id)
+                            .eq("status", "failed")
+                            .limit(1)
+                            .execute())
+            if failed_payouts.data:
+                continue
             try:
                 logger.info(f"Auto-settling challenge {row['id']}")
                 settle(row["id"])
