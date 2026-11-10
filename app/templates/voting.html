@@ -188,7 +188,7 @@
                 </div>
               </article>
 
-              {% if voting_open and ev.status == 'needs_vote' %}
+              {% if voting_open %}
                 <div class="vote-side-actions">
                   <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-side-form">
                     <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">

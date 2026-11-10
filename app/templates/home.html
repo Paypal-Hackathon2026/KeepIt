@@ -45,10 +45,202 @@
 
   <section class="home-about" aria-labelledby="about-us">
     <h2 id="about-us">About us</h2>
-    <p> We're a small team of four from Poznań. We built KeepIt because we know how easy it is
-  to promise "I'll do it tomorrow" and then quietly let it slide. We want to help people
-  stick to their goals, and to make keeping commitments more fun by turning them into
-  challenges with friends.</p>
+    <p class="about-text">
+      We're a small team of four from Poznań. We built KeepIt because we know how easy it is
+      to promise "I'll do it tomorrow" and then quietly let it slide. We want to help people
+      stick to their goals, and to make keeping commitments more fun by turning them into
+      challenges with friends.
+    </p>
+
+    <div class="team-grid">
+      <!-- Team Member 1 -->
+      <a href="https://github.com/jradzimska" target="_blank" rel="noopener noreferrer" class="team-card">
+        <div class="team-avatar-wrap">
+          <img src="https://github.com/jradzimska.png?size=120" alt="Julia Radzimska" class="team-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="team-avatar-fallback">JR</div>
+          <span class="team-github-badge"><i class="fa-brands fa-github"></i></span>
+        </div>
+        <h3 class="team-name">Julia Radzimska</h3>
+        <span class="team-github-handle">
+          <i class="fa-brands fa-github"></i> @jradzimska
+        </span>
+      </a>
+
+      <!-- Team Member 2 -->
+      <a href="https://github.com/zmoraogorow" target="_blank" rel="noopener noreferrer" class="team-card">
+        <div class="team-avatar-wrap">
+          <img src="https://github.com/zmoraogorow.png?size=120" alt="Kamil Bartel" class="team-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="team-avatar-fallback">KB</div>
+          <span class="team-github-badge"><i class="fa-brands fa-github"></i></span>
+        </div>
+        <h3 class="team-name">Kamil Bartel</h3>
+        <span class="team-github-handle">
+          <i class="fa-brands fa-github"></i> @zmoraogorow
+        </span>
+      </a>
+
+      <!-- Team Member 3 -->
+      <a href="https://github.com/jakowczukalicja" target="_blank" rel="noopener noreferrer" class="team-card">
+        <div class="team-avatar-wrap">
+          <img src="https://github.com/jakowczukalicja.png?size=120" alt="Alicja Jakowczuk" class="team-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="team-avatar-fallback">AJ</div>
+          <span class="team-github-badge"><i class="fa-brands fa-github"></i></span>
+        </div>
+        <h3 class="team-name">Alicja Jakowczuk</h3>
+        <span class="team-github-handle">
+          <i class="fa-brands fa-github"></i> @jakowczukalicja
+        </span>
+      </a>
+
+      <!-- Team Member 4 -->
+      <a href="https://github.com/tomciolowsky" target="_blank" rel="noopener noreferrer" class="team-card">
+        <div class="team-avatar-wrap">
+          <img src="https://github.com/tomciolowsky.png?size=120" alt="Tomasz Białecki" class="team-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="team-avatar-fallback">TB</div>
+          <span class="team-github-badge"><i class="fa-brands fa-github"></i></span>
+        </div>
+        <h3 class="team-name">Tomasz Białecki</h3>
+        <span class="team-github-handle">
+          <i class="fa-brands fa-github"></i> @tomciolowsky
+        </span>
+      </a>
+    </div>
+  </section>
+
+  <section class="home-built-with" aria-labelledby="built-with">
+    <div class="built-with-container">
+      <h2 id="built-with">Built with</h2>
+
+      <!-- PayPal Featured Card -->
+      <div class="tech-card tech-card-paypal">
+        <div class="tech-card-header">
+          <div class="tech-icon tech-icon-paypal">
+            <i class="fa-brands fa-paypal"></i>
+          </div>
+          <div>
+            <h3 class="tech-name">PayPal</h3>
+            <span class="tech-subtitle">Payments &amp; Identity</span>
+          </div>
+        </div>
+        <p class="tech-desc">
+          Powers our end-to-end financial settlement and seamless player authentication:
+        </p>
+        <ul class="paypal-features">
+          <li class="paypal-feature-tag">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Log in with PayPal
+          </li>
+          <li class="paypal-feature-tag">
+            <i class="fa-solid fa-credit-card"></i> Orders
+          </li>
+          <li class="paypal-feature-tag">
+            <i class="fa-solid fa-money-bill-transfer"></i> Payouts
+          </li>
+          <li class="paypal-feature-tag">
+            <i class="fa-solid fa-bolt"></i> Webhooks
+          </li>
+        </ul>
+      </div>
+
+      <!-- 6 Aligned Technology Boxes -->
+      <div class="tech-grid">
+        <!-- Gemini -->
+        <div class="tech-card">
+          <div class="tech-card-header">
+            <div class="tech-icon tech-icon-gemini">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+              <h3 class="tech-name">Gemini</h3>
+              <span class="tech-subtitle">AI Arbiter</span>
+            </div>
+          </div>
+          <p class="tech-desc">
+            Multimodal vision AI that inspects challenge proof photos and checks handwritten proof codes.
+          </p>
+        </div>
+
+        <!-- FastAPI -->
+        <div class="tech-card">
+          <div class="tech-card-header">
+            <div class="tech-icon tech-icon-fastapi">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+              <h3 class="tech-name">FastAPI</h3>
+              <span class="tech-subtitle">Backend Framework</span>
+            </div>
+          </div>
+          <p class="tech-desc">
+            Async Python backend handling session management, webhook events, and REST endpoints.
+          </p>
+        </div>
+
+        <!-- Supabase -->
+        <div class="tech-card">
+          <div class="tech-card-header">
+            <div class="tech-icon tech-icon-supabase">
+              <i class="fa-solid fa-database"></i>
+            </div>
+            <div>
+              <h3 class="tech-name">Supabase</h3>
+              <span class="tech-subtitle">Database &amp; Storage</span>
+            </div>
+          </div>
+          <p class="tech-desc">
+            PostgreSQL database with Row Level Security, atomic RPC functions, and photo storage.
+          </p>
+        </div>
+
+        <!-- HTMX -->
+        <div class="tech-card">
+          <div class="tech-card-header">
+            <div class="tech-icon tech-icon-htmx">
+              <i class="fa-solid fa-code"></i>
+            </div>
+            <div>
+              <h3 class="tech-name">HTMX</h3>
+              <span class="tech-subtitle">Frontend Reactivity</span>
+            </div>
+          </div>
+          <p class="tech-desc">
+            Real-time polling for challenge states and dynamic UI swaps without bulky JavaScript bundles.
+          </p>
+        </div>
+
+        <!-- Render -->
+        <div class="tech-card">
+          <div class="tech-card-header">
+            <div class="tech-icon tech-icon-render">
+              <i class="fa-solid fa-cloud"></i>
+            </div>
+            <div>
+              <h3 class="tech-name">Render</h3>
+              <span class="tech-subtitle">Cloud Platform</span>
+            </div>
+          </div>
+          <p class="tech-desc">
+            Zero-downtime automated deployment, SSL certification, and hosting for web services.
+          </p>
+        </div>
+
+        <!-- Postman -->
+        <div class="tech-card">
+          <div class="tech-card-header">
+            <div class="tech-icon tech-icon-postman">
+              <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <div>
+              <h3 class="tech-name">Postman</h3>
+              <span class="tech-subtitle">API &amp; Sandbox Testing</span>
+            </div>
+          </div>
+          <p class="tech-desc">
+            Test collections verifying PayPal Sandbox Orders, Payouts, and OAuth flows in PLN.
+          </p>
+        </div>
+      </div>
+
+    </div>
   </section>
 
 </main>
