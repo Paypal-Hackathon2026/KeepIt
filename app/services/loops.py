@@ -16,7 +16,7 @@ def sync_challenge_statuses(challenge_id: str | None = None):
             sync_challenge_status(ch)
 
     except Exception as e:
-        logger.error("Error syncing challenge statuses: ", e)
+        logger.error("Error syncing challenge statuses: %s", e)
 def check_challenges_ready_for_settlement():
     now=datetime.now(timezone.utc).isoformat()
     try:

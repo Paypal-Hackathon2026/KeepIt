@@ -10,6 +10,42 @@
 {% if errors.general %}
   <p class="field-error">{{ errors.general }}</p>
 {% endif %}
+<input type="hidden" id="join_deadline_utc" name="join_deadline_utc" value="">
+<input type="hidden" id="proof_deadline_utc" name="proof_deadline_utc" value="">
+<input type="hidden" id="voting_deadline_utc" name="voting_deadline_utc" value="">
+<input type="hidden" id="tz_offset_minutes" name="tz_offset_minutes" value="">
+<input type="hidden" id="user_timezone" name="user_timezone" value="">
+<script>
+  (function() {
+    var form = document.querySelector('.new-challenge-form');
+    if (!form) return;
+    form.addEventListener('submit', function() {
+      try {
+        var jd = document.getElementById('join_deadline');
+        if (jd && jd.value) {
+          var d1 = new Date(jd.value);
+          if (!isNaN(d1.getTime())) document.getElementById('join_deadline_utc').value = d1.toISOString();
+        }
+        var pd = document.getElementById('proof_deadline');
+        if (pd && pd.value) {
+          var d2 = new Date(pd.value);
+          if (!isNaN(d2.getTime())) document.getElementById('proof_deadline_utc').value = d2.toISOString();
+        }
+        var vd = document.getElementById('voting_deadline');
+        if (vd && vd.value) {
+          var d3 = new Date(vd.value);
+          if (!isNaN(d3.getTime())) document.getElementById('voting_deadline_utc').value = d3.toISOString();
+        }
+        document.getElementById('tz_offset_minutes').value = new Date().getTimezoneOffset();
+        if (window.Intl && Intl.DateTimeFormat) {
+          document.getElementById('user_timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        }
+      } catch (err) {
+        console.error('Timezone conversion error:', err);
+      }
+    });
+  })();
+</script>
 <div class="form_cell">
   <label for="title">Title:</label>
   <input type="text" id="title" name="title"
