@@ -1,0 +1,272 @@
+{% extends "base_logged_in.html" %}
+
+{% block title %}Voting · {{ challenge.title }} · KeepIt{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/challenges.css?v=7">
+{% endblock %}
+
+{% block content %}
+<script>document.querySelector(".page")?.classList.add("page-wide");</script>
+<div class="voting-page-container">
+  <a href="/challenges/{{ challenge.id }}" class="back-link">← Back to challenge</a>
+
+  <!-- Top Header Card -->
+  <section class="detail-card voting-header-card">
+    <div class="detail-top">
+      <div class="detail-badges">
+        <span class="status-badge status-{{ challenge.status }}">
+          {{ challenge.status | capitalize }}
+        </span>
+        <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
+          {% if challenge.verification_mode == 'vote' %}
+            <i class="fa-solid fa-users"></i> Group Vote
+          {% else %}
+            <i class="fa-solid fa-robot"></i> AI Arbiter
+          {% endif %}
+        </span>
+      </div>
+      <div class="detail-top-actions">
+        {% if challenge.voting_deadline_fmt %}
+          <span class="voting-deadline-pill">
+            <i class="fa-solid fa-clock"></i> Closes: <span data-utc="{{ challenge.voting_deadline }}">{{ challenge.voting_deadline_fmt }}</span>
+          </span>
+        {% endif %}
+        {% if not voting_started %}
+          <span class="text-muted" style="font-size: 13px; font-weight: 700;">
+            <i class="fa-solid fa-clock"></i> Voting starts after join deadline
+          </span>
+        {% elif not voting_open %}
+          <span class="text-muted" style="font-size: 13px; font-weight: 700;">
+            <i class="fa-solid fa-lock"></i> Voting closed
+          </span>
+        {% elif unvoted_count and unvoted_count > 0 %}
+          <span class="voting-pill">{{ unvoted_count }} awaiting your vote</span>
+        {% elif pending_votes and pending_votes | length > 0 %}
+          <span class="badge-voted-yes"><i class="fa-solid fa-check"></i> You've voted on all proofs</span>
+        {% else %}
+          <span class="badge-voted-yes"><i class="fa-solid fa-check"></i> No pending votes</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="voting-header-title-box">
+      <span class="voting-subtitle">Community Voting</span>
+      <h1 class="detail-title">{{ challenge.title }}</h1>
+      <p class="detail-criteria">{{ challenge.criteria }}</p>
+    </div>
+
+    <div class="detail-meta-grid">
+      {% if challenge.proof_code %}
+        <div class="meta-box">
+          <span class="meta-label">Secret Proof Code</span>
+          <span class="proof-code">{{ challenge.proof_code }}</span>
+        </div>
+      {% endif %}
+      <div class="meta-box">
+        <span class="meta-label">Voting Deadline</span>
+        <span class="meta-value" data-utc="{{ challenge.voting_deadline }}">{{ challenge.voting_deadline_fmt }}</span>
+      </div>
+      <div class="meta-box">
+        <span class="meta-label">Verification Mode</span>
+        <span class="meta-value">
+          {% if challenge.verification_mode == 'vote' %}
+            Group vote only
+          {% else %}
+            AI Arbiter
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    {% if vote_success %}
+      <p class="field-success"><i class="fa-solid fa-circle-check"></i> Your vote has been recorded!</p>
+    {% elif vote_error %}
+      <p class="field-error"><i class="fa-solid fa-circle-xmark"></i> {{ vote_error }}</p>
+    {% endif %}
+  </section>
+
+  <!-- Chronological Feed of Photo Submissions -->
+  <section class="voting-feed-section">
+    <div class="voting-feed-heading">
+      <span>Submissions Timeline</span>
+    </div>
+
+    <div class="voting-feed">
+      {% if feed and feed | length > 0 %}
+        {% for ev in feed %}
+          {% if ev.is_me %}
+            <!-- CURRENT USER PHOTO: DISPLAYED ON THE RIGHT -->
+            <div class="vote-feed-row vote-feed-row-me chat-msg-me" id="vote-card-{{ ev.id }}">
+              <article class="feed-vote-card feed-vote-card-me chat-bubble-me">
+                <div class="feed-card-header">
+                  <div class="feed-author-info">
+                    <span class="feed-author-name feed-author-name-me">
+                      <i class="fa-solid fa-user"></i> You
+                    </span>
+                  </div>
+                </div>
+
+                {% if ev.photo_url %}
+                  <div class="feed-photo-wrapper">
+                    <img class="feed-photo vote-photo-clickable"
+                         src="{{ ev.photo_url }}"
+                         alt="Your proof"
+                         onclick="openImageModal(this.src, 'Your proof')"
+                         title="Click to enlarge photo">
+                  </div>
+                {% endif %}
+
+                <div class="feed-card-footer">
+                  <div class="my-proof-status-row">
+                    <span class="status-badge status-{{ ev.status }}">
+                      {% if ev.status == 'needs_vote' %}
+                        In voting
+                      {% elif ev.status == 'approved' %}
+                        Approved
+                      {% elif ev.status == 'rejected' %}
+                        Rejected
+                      {% elif ev.status == 'auto_approved' %}
+                        Auto-Approved
+                      {% else %}
+                        {{ ev.status | capitalize }}
+                      {% endif %}
+                    </span>
+
+                    <div class="vote-stats">
+                      <span class="vote-stat-yes"><i class="fa-solid fa-thumbs-up"></i> {{ ev.yes_count }}</span>
+                      <span class="vote-stat-no"><i class="fa-solid fa-thumbs-down"></i> {{ ev.no_count }}</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          {% else %}
+            <!-- OTHER PARTICIPANT PHOTO: DISPLAYED ON THE LEFT -->
+            <div class="vote-feed-row vote-feed-row-other chat-msg-them" id="vote-card-{{ ev.id }}">
+              <article class="feed-vote-card feed-vote-card-other chat-bubble-them">
+                <div class="feed-card-header">
+                  <div class="feed-author-info">
+                    <span class="feed-author-name">{{ ev.author_name }}</span>
+                  </div>
+                </div>
+
+                {% if ev.photo_url %}
+                  <div class="feed-photo-wrapper">
+                    <img class="feed-photo vote-photo-clickable"
+                         src="{{ ev.photo_url }}"
+                         alt="Proof by {{ ev.author_name }}"
+                         onclick="openImageModal(this.src, 'Proof by {{ ev.author_name }}')"
+                         title="Click to enlarge photo">
+                  </div>
+                {% endif %}
+
+                <!-- Voting controls under photo -->
+                <div class="feed-card-footer">
+                  <div class="vote-stats">
+                    <span class="vote-stat-yes"><i class="fa-solid fa-thumbs-up"></i> {{ ev.yes_count }}</span>
+                    <span class="vote-stat-no"><i class="fa-solid fa-thumbs-down"></i> {{ ev.no_count }}</span>
+                  </div>
+
+                  {% if ev.status in ['approved', 'rejected'] %}
+                    <div class="resolved-status-box">
+                      {% if ev.status == 'approved' %}
+                        <span class="badge-voted-yes"><i class="fa-solid fa-circle-check"></i> Approved by community</span>
+                      {% else %}
+                        <span class="badge-voted-no"><i class="fa-solid fa-circle-xmark"></i> Rejected by community</span>
+                      {% endif %}
+                    </div>
+                  {% elif not voting_started %}
+                    <div class="resolved-status-box">
+                      <span class="text-muted"><i class="fa-solid fa-clock"></i> Voting starts after join deadline</span>
+                    </div>
+                  {% elif challenge.status in ['closed', 'settling', 'settled', 'cancelled'] or not voting_open %}
+                    <div class="resolved-status-box">
+                      <span class="text-muted"><i class="fa-solid fa-lock"></i> Voting has concluded</span>
+                    </div>
+                  {% endif %}
+                </div>
+              </article>
+
+              {% if voting_open %}
+                <div class="vote-side-actions">
+                  <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-side-form">
+                    <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">
+                    <input type="hidden" name="approve" value="true">
+                    <button type="submit"
+                            class="btn-side-vote btn-side-vote-approve {% if ev.my_vote is true %}active{% elif ev.my_vote is false %}inactive{% endif %}"
+                            title="Approve">
+                      <i class="fa-solid fa-thumbs-up"></i>
+                    </button>
+                  </form>
+
+                  <form method="post" action="/evidence/{{ ev.id }}/vote" class="vote-side-form">
+                    <input type="hidden" name="return_to" value="/challenges/{{ challenge.id }}/voting">
+                    <input type="hidden" name="approve" value="false">
+                    <button type="submit"
+                            class="btn-side-vote btn-side-vote-reject {% if ev.my_vote is false %}active{% elif ev.my_vote is true %}inactive{% endif %}"
+                            title="Reject">
+                      <i class="fa-solid fa-thumbs-down"></i>
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="detail-card text-center" style="padding: 48px 24px; text-align: center;">
+          <h2 style="font-family: var(--font-display); font-size: 24px; color: var(--blue); margin-bottom: 8px;">
+            {% if challenge.verification_mode == 'vote' %}
+              No photos submitted yet
+            {% else %}
+              No photos requiring voting
+            {% endif %}
+          </h2>
+          <p style="color: var(--text-muted); margin-bottom: 20px;">
+            {% if challenge.verification_mode == 'vote' %}
+              When participants submit proof photos, they will appear here chronologically for community voting.
+            {% else %}
+              Only photos that the AI Arbiter flagged for community review appear here. Currently, there are none.
+            {% endif %}
+          </p>
+          <a href="/challenges/{{ challenge.id }}" class="btn-secondary">
+            Back to challenge
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+
+<!-- Lightbox Modal for Photo Zoom -->
+<div id="image-modal" class="image-modal" onclick="closeImageModal(event)">
+  <div class="modal-content-wrapper" onclick="event.stopPropagation()">
+    <button type="button" class="modal-close" onclick="closeImageModal()" aria-label="Close enlarged photo">&times;</button>
+    <img id="modal-img" class="modal-image" src="" alt="Enlarged proof photo">
+    <div id="modal-caption" class="modal-caption"></div>
+  </div>
+</div>
+
+<script>
+function openImageModal(src, caption) {
+  const modal = document.getElementById("image-modal");
+  const img = document.getElementById("modal-img");
+  const cap = document.getElementById("modal-caption");
+  img.src = src;
+  cap.textContent = caption || "";
+  modal.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeImageModal() {
+  const modal = document.getElementById("image-modal");
+  modal.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeImageModal();
+});
+</script>
+{% endblock %}

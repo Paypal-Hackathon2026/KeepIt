@@ -99,9 +99,9 @@ VOTE_AT = 0.4
 
 def decide(verdict: Verdict) -> str:
     if "missing_code" in verdict.fraud_flags:
-        return "rejected"
+        return "auto_rejected"
     if verdict.confidence >= APPROVE_AT:
         return "auto_approved"
     if verdict.confidence >= VOTE_AT:
         return "needs_vote"
-    return "rejected"
+    return "auto_rejected"

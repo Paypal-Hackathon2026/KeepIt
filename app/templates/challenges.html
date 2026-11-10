@@ -46,7 +46,7 @@
 
           {% if challenge.proof_deadline_fmt %}
             <p class="challenge-card-deadline">
-              Proof due: <strong>{{ challenge.proof_deadline_fmt }}</strong>
+              Proof due: <strong data-utc="{{ challenge.proof_deadline }}">{{ challenge.proof_deadline_fmt }}</strong>
             </p>
           {% endif %}
         </a>

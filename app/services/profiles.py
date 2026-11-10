@@ -88,7 +88,7 @@ def get_profile_stats(user_id: str) -> dict:
         for p in participants:
             if p.get("paid"):
                 c = challenges_by_id.get(str(p["challenge_id"]))
-                if c and c.get("status") in ("open", "active", "settling"):
+                if c and c.get("status") in ("open", "active", "voting", "closed", "settling"):
                     active_challenges_amount_minor += c.get("entry_fee_minor", 0)
 
     payouts_res = (

@@ -42,7 +42,7 @@
             </span>
             <div class="history-user-details">
               <span class="history-name">{{ p.display_name or "Participant" }}</span>
-              <span class="history-time">{{ p.joined_at_fmt }}</span>
+              <span class="history-time" data-utc="{{ p.joined_at }}">{{ p.joined_at_fmt }}</span>
             </div>
           </div>
           <div class="history-amount">
