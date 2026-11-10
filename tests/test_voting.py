@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -444,7 +445,8 @@ def test_voting_only_mode_attempt_1_rejected_marks_forfeited():
     ]
     challenge_data = [{
         "id": challenge_id,
-        "status": "open",
+        "status": "active",
+        "join_deadline": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
         "verification_mode": "vote",
     }]
 
@@ -563,7 +565,8 @@ def test_challenge_page_renders_go_to_voting_button():
         "entry_fee_minor": 1000,
         "pool_minor": 2000,
         "proof_code": "VOTE999",
-        "status": "open",
+        "status": "active",
+        "join_deadline": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
         "verification_mode": "vote",
         "participants": [
             {
@@ -687,7 +690,8 @@ def test_voting_subpage_renders_proofs_and_modal():
         "entry_fee_minor": 1000,
         "pool_minor": 2000,
         "proof_code": "VOTE999",
-        "status": "open",
+        "status": "active",
+        "join_deadline": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
         "verification_mode": "vote",
         "participants": [
             {
@@ -723,7 +727,7 @@ def test_voting_subpage_renders_proofs_and_modal():
     ]
 
     with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.get_pending_votes_for_user", return_value=mock_pending):
+         patch("app.routes.challenge_pages.get_voting_feed", return_value=mock_pending):
 
         resp = client.get(f"/challenges/{challenge_id}/voting")
         assert resp.status_code == 200
@@ -754,7 +758,8 @@ def test_voting_subpage_when_user_already_voted_on_all():
         "entry_fee_minor": 1000,
         "pool_minor": 2000,
         "proof_code": "VOTE999",
-        "status": "open",
+        "status": "active",
+        "join_deadline": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
         "verification_mode": "vote",
         "participants": [
             {
@@ -900,8 +905,8 @@ def test_voting_subpage_chat_layout_me_on_right_others_on_left():
         assert resp.status_code == 200
         html = resp.text
 
-        # 1. Header has "Voting Page", title, criteria
-        assert "Voting Page" in html
+        # Header has the voting title, challenge title, and criteria.
+        assert "Community Voting" in html
         assert "Squat Master 3000" in html
         assert "Record yourself completing 30 deep squats" in html
         assert "SQUAT123" in html
@@ -909,7 +914,7 @@ def test_voting_subpage_chat_layout_me_on_right_others_on_left():
         # 2. My photo is on the RIGHT
         assert "chat-msg-me" in html
         assert "chat-bubble-me" in html
-        assert "Your submission" in html
+        assert 'alt="Your proof"' in html
         # You cannot vote on your own photo (no form to vote on my_evidence_id)
         assert f"/evidence/{my_evidence_id}/vote" not in html
 
@@ -917,7 +922,6 @@ def test_voting_subpage_chat_layout_me_on_right_others_on_left():
         assert "chat-msg-them" in html
         assert "chat-bubble-them" in html
         assert "Bob Submitter" in html
-        assert "Participant" in html
         # Vote buttons are present for other's photo
         assert f"/evidence/{other_evidence_id}/vote" in html
         assert "Approve" in html
@@ -976,6 +980,7 @@ def test_voting_notifications_hidden_when_challenge_is_settling_or_closed():
         # 1. Detail page check
         with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
              patch("app.routes.challenge_pages.get_my_evidence", return_value=[]), \
+             patch("app.routes.challenge_pages.get_voting_feed", return_value=[]), \
              patch("app.routes.challenge_pages.get_pending_votes_for_user", return_value=mock_pending):
 
             resp = client.get(f"/challenges/{challenge_id}")
@@ -991,7 +996,7 @@ def test_voting_notifications_hidden_when_challenge_is_settling_or_closed():
             assert resp.status_code == 200
             assert "awaiting your vote" not in resp.text
             assert "Voting closed" in resp.text
-            assert "Voting has concluded." in resp.text
+            assert "Voting has concluded" in resp.text
             # No vote action buttons when closed/settling
             assert f"/evidence/{other_evidence_id}/vote" not in resp.text
 
@@ -1374,8 +1379,6 @@ def test_vote_only_challenge_first_user_photo_visible_and_votable_by_subsequent_
         res = cast_vote(legacy_auto_approved_ev_id, MOCK_USER["id"], approve=True)
         assert res["approve"] is True
         assert res["evidence_id"] == legacy_auto_approved_ev_id
-
-
 
 
 
