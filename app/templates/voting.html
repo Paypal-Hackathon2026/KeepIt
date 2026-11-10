@@ -105,6 +105,11 @@
                       <i class="fa-solid fa-user"></i> You
                     </span>
                   </div>
+                  {% if ev.created_at %}
+                    <span class="feed-time" data-utc="{{ ev.created_at }}">
+                      <i class="fa-solid fa-clock"></i> {{ ev.created_at_fmt or '' }}
+                    </span>
+                  {% endif %}
                 </div>
 
                 {% if ev.photo_url %}
@@ -149,6 +154,11 @@
                   <div class="feed-author-info">
                     <span class="feed-author-name">{{ ev.author_name }}</span>
                   </div>
+                  {% if ev.created_at %}
+                    <span class="feed-time" data-utc="{{ ev.created_at }}">
+                      <i class="fa-solid fa-clock"></i> {{ ev.created_at_fmt or '' }}
+                    </span>
+                  {% endif %}
                 </div>
 
                 {% if ev.photo_url %}

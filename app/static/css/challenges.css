@@ -1352,6 +1352,15 @@
   border-bottom: 2px solid var(--cream-dark);
 }
 
+.feed-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .feed-author-info {
   display: flex;
   align-items: center;

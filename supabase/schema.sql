@@ -92,6 +92,7 @@ create table if not exists evidence (
   storage_path text not null,
   status text not null default 'pending'
     check (status in ('pending', 'auto_approved', 'auto_rejected', 'needs_vote', 'approved', 'rejected')),
+  created_at timestamptz not null default now(),
   foreign key (challenge_id, user_id) references participants (challenge_id, user_id),
   unique (challenge_id, user_id, attempt),
   unique (id, challenge_id)

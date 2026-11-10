@@ -255,9 +255,10 @@ def challenge_detail_page(
         join_dl = join_dl.replace(tzinfo=timezone.utc)
     is_after_join = (not join_dl) or (now >= join_dl)
     voting_open = is_after_join and challenge.get("status") in ("active", "voting")
+    user_tz = request.cookies.get("user_timezone")
     pending_votes = (
         get_pending_votes_for_user(
-            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode
+            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode, user_tz=user_tz
         )
         if (has_paid and voting_open)
         else []
@@ -515,15 +516,17 @@ def voting_page(
     is_after_join = (not join_dl) or (now >= join_dl)
     voting_started = is_after_join and challenge.get("status") != "open"
     voting_open = voting_started and challenge.get("status") in ("active", "voting")
+    user_tz = request.cookies.get("user_timezone")
     feed = get_voting_feed(
         str(challenge_id),
         str(user["id"]),
         participants,
         verification_mode=verification_mode,
+        user_tz=user_tz,
     )
     if not feed:
         feed = get_pending_votes_for_user(
-            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode
+            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode, user_tz=user_tz
         )
 
     if feed and verification_mode != "vote":

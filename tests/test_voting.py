@@ -1381,6 +1381,37 @@ def test_vote_only_challenge_first_user_photo_visible_and_votable_by_subsequent_
         assert res["evidence_id"] == legacy_auto_approved_ev_id
 
 
+def test_get_voting_feed_chronological_order_by_created_at():
+    """
+    Verifies that get_voting_feed orders items strictly by created_at timestamp
+    (oldest to newest) regardless of the original raw database order, user_id alphabetical order,
+    or attempt numbers.
+    """
+    from app.services.evidence import get_voting_feed
+
+    challenge_id = str(uuid.uuid4())
+    mock_supabase = MagicMock()
+    sample_data = [
+        {"id": "ev-1", "challenge_id": challenge_id, "user_id": "user_a", "attempt": 2, "storage_path": "p1", "status": "needs_vote", "created_at": "2026-11-10T10:15:00+00:00"},
+        {"id": "ev-2", "challenge_id": challenge_id, "user_id": "user_m", "attempt": 1, "storage_path": "p2", "status": "needs_vote", "created_at": "2026-11-10T10:30:00+00:00"},
+        {"id": "ev-3", "challenge_id": challenge_id, "user_id": "user_z", "attempt": 1, "storage_path": "p3", "status": "needs_vote", "created_at": "2026-11-10T10:00:00+00:00"},
+    ]
+
+    tbl = MagicMock()
+    tbl.select.return_value.eq.return_value.execute.return_value.data = sample_data
+    mock_supabase.table.return_value = tbl
+    mock_supabase.storage.from_().create_signed_url.return_value = {"signedUrl": "https://url.com"}
+
+    with patch("app.services.evidence.supabase", mock_supabase):
+        feed = get_voting_feed(challenge_id, "user_a", verification_mode="vote")
+        ids = [item["id"] for item in feed]
+        assert ids == ["ev-3", "ev-1", "ev-2"]
+        assert feed[0]["created_at_fmt"] == "2026-11-10 10:00"
+        assert feed[1]["created_at_fmt"] == "2026-11-10 10:15"
+        assert feed[2]["created_at_fmt"] == "2026-11-10 10:30"
+
+
+
 
 
 
