@@ -144,15 +144,20 @@ async def paypal_webhook(request: Request):
         event_type = payload.get("event_type") or payload.get("type")
         resource = payload.get("resource") or {}
         if event_type == "PAYMENT.CAPTURE.COMPLETED":
-            handle_payment_capture_completed(payload.get("resource") or {})
+            handle_payment_capture_completed(resource)
             return JSONResponse({"status": "processed"}, status_code=200)
         elif event_type == "PAYMENT.PAYOUTS-ITEM.SUCCEEDED":
             handle_payout_item_succeeded(resource)
             return JSONResponse({"status": "processed"}, status_code=200)
+        elif event_type in ("PAYMENT.PAYOUTS-ITEM.FAILED", "PAYMENT.PAYOUTS-ITEM.BLOCKED","PAYMENT.PAYOUTS-ITEM.CANCELED"):
+            handle_payout_item_failed(resource)
+            return JSONResponse({"status": "processed"}, status_code=200)
         elif event_type == "PAYMENT.PAYOUTSBATCH.SUCCESS":
             handle_payout_batch_success(resource)
             return JSONResponse({"status": "processed"}, status_code=200)
-
+        elif event_type == "PAYMENT.PAYOUTSBATCH.DENIED":
+            handle_payout_batch_denied(resource)
+            return JSONResponse({"status": "processed"}, status_code=200)
         return JSONResponse({"status": "ignored"}, status_code=200)
     except HTTPException:
         raise
@@ -164,8 +169,27 @@ def handle_payout_item_succeeded(resource: dict) -> None:
     payout_item=resource.get("payout_item") or {}
     sender_item_id=payout_item.get("sender_item_id")
     if sender_item_id:
-        supabase.table("payouts").update({"status":"success", "paypal_item_id": payout_item_id}).eq("id", sender_item_id).execute()
+        p_res=(supabase.table("payouts").update({"status":"success", "paypal_item_id": payout_item_id}).eq("id", sender_item_id).execute())
         logger.info(f"Marked payout {sender_item_id} as success")
+        if p_res.data:
+            ch_id=p_res.data[0].get("challenge_id")
+            all_p=(supabase.table("payouts").select("status").eq("challenge_id", ch_id).execute()).data or []
+            if all_p and all(item.get("status")=="success" for item in all_p):
+                supabase.table("challenges").update({"status":"settled"}).eq("id", ch_id).execute()
+                logger.info(f"Challenge {ch_id} marked as settled after all payouts succeeded")
+def handle_payout_item_failed(resource: dict) -> None:
+    payout_item_id = resource.get("payout_item_id")
+    payout_item=resource.get("payout_item") or {}
+    sender_item_id=payout_item.get("sender_item_id")
+    if not sender_item_id:
+        return
+    else:
+        p_res=(supabase.table("payouts").update({"status":"failed", "paypal_item_id": payout_item_id}).eq("id", sender_item_id).execute())
+        if p_res.data:
+            ch_id=p_res.data[0].get("challenge_id")
+            supabase.table("challenges").update({"status":"closed"}).eq("id", ch_id).execute()
+            logger.info(f"Challenge {ch_id} marked as closed after a payout failed, can retry payouts")
+
 def handle_payout_batch_success(resource: dict) -> None:
     batch_header=resource.get("batch_header") or {}
     payout_batch_id=batch_header.get("payout_batch_id")
@@ -183,6 +207,22 @@ def handle_payout_batch_success(resource: dict) -> None:
         logger.info(f"Challenge {challenge_id} marked as settled after payout batch {payout_batch_id} succeeded")
     else:
         logger.warning(f"No challenge found with paypal_batch_id {payout_batch_id} to mark as settled")
+def handle_payout_batch_denied(resource: dict) -> None:
+    batch_header=resource.get("batch_header") or {}
+    payout_batch_id=batch_header.get("payout_batch_id")
+    if not payout_batch_id:
+        return
+    ch_res=(
+        supabase.table("challenges")
+        .select("id")
+        .eq("paypal_batch_id", payout_batch_id)
+        .execute()
+    ).data or []
+    if ch_res:
+        ch_id=ch_res[0]["id"]
+        supabase.table("payouts").update({"status":"failed"}).eq("challenge_id", ch_id).eq("status", "pending").execute()
+        supabase.table("challenges").update({"status":"closed"}).eq("id", ch_id).execute()
+        logger.warning(f"Payout batch {payout_batch_id} denied for challenge {ch_id}")
         
 
 

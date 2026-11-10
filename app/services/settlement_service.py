@@ -62,7 +62,14 @@ def settle(challenge_id:UUID)->dict:
             if participant["outcome"]=="pending":
                 participant["outcome"]="forfeited"
     payouts_mapping=compute_payouts(participants=p, entry_fee_minor=ch["entry_fee_minor"])
-    to_pay = {uid: amt for uid, amt in payouts_mapping.items() if amt > 0}
+    already_successful=(supabase.table("payouts")
+                                       .select("user_id")
+                                       .eq("challenge_id", ch_id)
+                                        .eq("status", "success")
+                                        .execute()
+                                       ).data or []
+    already_paid_users={row["user_id"] for row in already_successful}
+    to_pay = {uid: amt for uid, amt in payouts_mapping.items() if amt > 0 and uid not in already_paid_users}
     if not to_pay:
         supabase.table("challenges").update({"status":"settled"}).eq("id", ch_id).execute()
         return {"settled": True, "payouts": 0}
@@ -77,13 +84,14 @@ def settle(challenge_id:UUID)->dict:
     saved_payouts=(supabase.table("payouts")
                      .select("id,user_id,amount_minor")
                      .eq("challenge_id", ch_id)
+                     .in_("user_id", list(to_pay.keys()))
                      .execute()).data or []
     emails={participant["user_id"]: participant["profiles"]["paypal_email"] for participant in p if participant.get("profiles")}
     items_to_send=[{
         "payout_id": str(sp["id"]),
         "email":emails[sp["user_id"]],
         "amount_minor": sp["amount_minor"],}
-        for sp in saved_payouts]
+        for sp in saved_payouts if sp["user_id"] in emails and emails[sp["user_id"]]]
     try:
         paypal_reult=create_paypal_batch(ch_id, items_to_send)
         batch_id=paypal_reult["batch_header"]["payout_batch_id"]

@@ -274,7 +274,10 @@ def challenge_detail_page(
     is_owner = bool(creator_id and str(creator_id) == str(user.get("id")))
     paid_participants = [p for p in participants if p.get("paid")]
     all_resolved = bool(paid_participants) and all(p.get("outcome") != "pending" for p in paid_participants)
-    can_settle = is_owner and (challenge.get("status") in ALLOWED_STATUSES) and (all_resolved or challenge.get("status") == "closed")
+    payouts=challenge.get("payouts", [])
+    has_failed_payouts=any(p.get("status")=="failed" for p in payouts)
+    can_settle = is_owner and (challenge.get("status") in ALLOWED_STATUSES) and (all_resolved or challenge.get("status") == "closed") or (challenge.get("status") == "closed" and has_failed_payouts)
+
 
     return templates.TemplateResponse(
         request,
@@ -299,6 +302,7 @@ def challenge_detail_page(
             "max_attempts": max_attempts,
             "has_needs_vote": has_needs_vote,
             "can_settle": can_settle,
+            "has_failed_payouts": has_failed_payouts,
         },
     )
 
@@ -315,6 +319,8 @@ def challenge_state_fragment(
 
     user_tz = request.cookies.get("user_timezone")
     _prepare_challenge_view(challenge, user_tz)
+    payouts = challenge.get("payouts", [])
+    has_failed_payouts = any(p.get("status") == "failed" for p in payouts)
 
     return templates.TemplateResponse(
         request,
@@ -322,6 +328,7 @@ def challenge_state_fragment(
         {
             "user": user,
             "challenge": challenge,
+            "has_failed_payouts": has_failed_payouts,
         },
     )
 @router.post("/challenges/{challenge_id}/pay")

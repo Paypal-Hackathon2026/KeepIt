@@ -220,6 +220,23 @@ def get_challenge_by_id(challenge_id: UUID) -> dict | None:
 
     challenge["participants"] = participants
     challenge["pool_minor"] = _calculate_pool_minor(challenge["entry_fee_minor"], participants)
+    payouts_res=(
+        supabase.table("payouts")
+        .select("id,user_id, amount_minor, status, paypal_item_id")
+        .eq("challenge_id", str(challenge_id))
+        .execute()
+    )
+    user_name_map={p["user_id"]:p["display_name"] for p in participants if p.get("display_name")}
+    payouts=[{
+        "id": p["id"],
+        "user_id": p["user_id"],
+        "display_name": user_name_map.get(p["user_id"]),
+        "amount_minor": p["amount_minor"],
+        "status": p["status"],
+    }
+        for p in payouts_res.data or []
+    ]
+    challenge["payouts"]=payouts
     
 
     return challenge

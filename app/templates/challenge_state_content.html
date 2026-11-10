@@ -55,4 +55,42 @@
     <p class="text-muted">No payments yet.</p>
   {% endif %}
 </section>
+{% if challenge.payouts and challenge.payouts | length > 0 %}
+<section class="history-card">
+<h2 class="section-heading">Payout History</h2>
+<ul class="history-list">
+  {% for p in challenge.payouts %}
+    <li class="history-row">
+      <div class="history-user">
+        <span class="participant-avatar">
+          {{ (p.display_name or "?")[0] | upper }}
+        </span>
+        <div class="history-user-details">
+          <span class="history-name">{{ p.display_name or "Recipient" }}</span>
+          <span class="history-time">
+            {% if p.status=="success" %}
+            <span class="badge-paid">Paid</span>
+            {% elif p.status=="failed" %}
+            <span class="badge-unpaid">Failed</span>
+            {% else %}
+            <span class="badge-unpaid" style="background: var(--yellow-light, #fef3c7); color: var(--yellow-dark, #b45309);">Processing</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      <div class="history-amount">
+        +{{ "%.2f"|format(p.amount_minor / 100) }} PLN
+      </div>
+    </li>
+  {% endfor %}
+</ul>
+{% if has_failed_payouts and user.id == challenge.creator_id %}
+<form method="post" action="/challenges/{{challenge.id}}/settle" style="margin-top: 16px;">
+  <button type="submit" class="btn-primary btn-settle btn-full" style="background: var(--red, #b91c1c);">
+    <i class="fa-solid fa-rotate-right">Retry Failed Payouts</i> </button>
+</form>
+      {% endif %}
 
+
+</section>
+{% endif %}
