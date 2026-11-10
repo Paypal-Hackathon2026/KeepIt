@@ -169,7 +169,7 @@ body {
   font-size: 14px;
   font-weight: 600;
   color: var(--blue);
-  text-decoration: underline;
+  text-decoration: none;
   text-align: left;
   display: block;
 }
@@ -180,6 +180,7 @@ body {
 
 .avatar-link:hover {
   color: var(--blue-dark);
+  text-decoration: underline;
 }
 
 .link-button {
@@ -190,9 +191,14 @@ body {
   font-size: 14px;
   font-weight: 600;
   color: var(--blue);
-  text-decoration: underline;
+  text-decoration: none;
   cursor: pointer;
   text-align: left;
+}
+
+.link-button:hover {
+  color: var(--blue-dark);
+  text-decoration: underline;
 }
 
 .page {

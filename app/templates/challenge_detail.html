@@ -29,7 +29,7 @@
           Copy invite link
         </button>
         {% if has_paid %}
-          <a href="/challenges/{{ challenge.id }}/voting" target="_blank" class="btn-secondary btn-voting" id="go-to-voting-btn">
+          <a href="/challenges/{{ challenge.id }}/voting" target="_blank" class="btn-secondary" id="go-to-voting-btn">
             <i class="fa-solid fa-check-to-slot"></i> Go to voting
             {% if voting_open and unvoted_count and unvoted_count > 0 %}
               <span class="voting-pill">{{ unvoted_count }}</span>
