@@ -1,6 +1,17 @@
 from datetime import datetime, timezone
 
-CHALLENGE_STATUSES = ("open", "active", "settling", "settled", "cancelled")
+# Must match the challenges.status constraint in supabase/schema.sql.
+CHALLENGE_STATUSES = ("open", "active", "voting", "closed", "settling", "settled", "cancelled")
+CHALLENGE_STATUS_LABELS = {
+    "open": "Open",
+    "active": "Active",
+    "voting": "Voting",
+    "closed": "Closed",
+    "settling": "Settling",
+    "settled": "Settled",
+    "cancelled": "Cancelled",
+}
+UPCOMING_DEADLINE_STATUSES = ("open", "active", "voting")
 CHALLENGE_MODES = ("ai", "vote")
 
 
@@ -28,6 +39,10 @@ def relevant_deadline(challenge: dict, now: datetime) -> tuple[str, str | None]:
             label, deadline = "Proof due", proof_deadline
         else:
             label, deadline = "Voting ends", challenge.get("voting_deadline")
+    elif status == "voting":
+        label, deadline = "Voting ends", challenge.get("voting_deadline")
+    elif status == "closed":
+        label, deadline = "Ended", challenge.get("voting_deadline")
     elif status in ("settling", "settled", "cancelled"):
         label, deadline = "Ended", challenge.get("proof_deadline")
     else:
@@ -83,7 +98,7 @@ def filter_and_sort_challenges(
     def deadline_sort_key(challenge: dict) -> tuple[int, float]:
         challenge_status = challenge.get("status")
         status_index = status_order.get(challenge_status, len(status_order))
-        if challenge_status in ("open", "active"):
+        if challenge_status in UPCOMING_DEADLINE_STATUSES:
             _, deadline = relevant_deadline(challenge, now)
             parsed_deadline = _parse_challenge_datetime(deadline)
             return (

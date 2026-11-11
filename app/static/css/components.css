@@ -93,21 +93,6 @@
   color: #b26a00;
 }
 
-.status-voting {
-  background: #ede9fe;
-  color: #6d28d9;
-}
-
-.status-closed {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.status-settling {
-  background: #ccfbf1;
-  color: #0f766e;
-}
-
 .status-settled {
   background: var(--green-light);
   color: var(--green);

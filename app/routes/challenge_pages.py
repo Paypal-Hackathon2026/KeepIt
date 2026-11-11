@@ -16,6 +16,7 @@ from app.services.challenge_service import (
 )
 from app.services.challenge_filters import (
     CHALLENGE_STATUSES,
+    CHALLENGE_STATUS_LABELS,
     filter_and_sort_challenges,
     relevant_deadline,
 )
@@ -207,6 +208,8 @@ def my_challenges_page(
             "user": user,
             "challenges": challenges,
             "counts": counts,
+            "statuses": CHALLENGE_STATUSES,
+            "status_labels": CHALLENGE_STATUS_LABELS,
             "total_count": len(all_challenges),
             "status": status if status in ("all", *counts) else "all",
             "mode": mode if mode in ("all", "ai", "vote") else "all",
