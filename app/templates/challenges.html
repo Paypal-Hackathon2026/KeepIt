@@ -6,6 +6,47 @@
   <link rel="stylesheet" href="/static/css/challenges.css">
 {% endblock %}
 
+{% macro challenge_grid(challenges) %}
+  <div class="challenges-grid">
+    {% for challenge in challenges %}
+      <a href="/challenges/{{ challenge.id }}" class="challenge-card">
+        <div class="challenge-card-top">
+          <div class="card-badges">
+            <span class="status-badge status-{{ challenge.status }}">
+              {{ challenge.status | capitalize }}
+            </span>
+            <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
+              {% if challenge.verification_mode == 'vote' %}
+                <i class="fa-solid fa-users"></i> Vote
+              {% else %}
+                <i class="fa-solid fa-robot"></i> AI
+              {% endif %}
+            </span>
+          </div>
+          <span class="challenge-fee">
+            Entry: {{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN
+          </span>
+        </div>
+
+        <h2 class="challenge-card-title">{{ challenge.title }}</h2>
+
+        <div class="challenge-card-pool">
+          <span class="pool-label">Commitment Pool</span>
+          <span class="pool-amount">
+            {{ "%.2f"|format((challenge.pool_minor | default(0)) / 100) }} PLN
+          </span>
+        </div>
+
+        {% if challenge.deadline_fmt %}
+          <p class="challenge-card-deadline">
+            {{ challenge.deadline_label }}: <strong data-utc="{{ challenge.deadline_iso }}">{{ challenge.deadline_fmt }}</strong>
+          </p>
+        {% endif %}
+      </a>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
 {% block content %}
 <section class="challenges-section">
   <div class="challenges-header">
@@ -13,44 +54,94 @@
     <a href="/challenges/new" class="btn-primary mobile-new-btn">+ New challenge</a>
   </div>
 
-  {% if challenges %}
-    <div class="challenges-grid">
-      {% for challenge in challenges %}
-        <a href="/challenges/{{ challenge.id }}" class="challenge-card">
-          <div class="challenge-card-top">
-            <div class="card-badges">
-              <span class="status-badge status-{{ challenge.status }}">
-                {{ challenge.status | capitalize }}
+  {% if total_count %}
+    {% set status_labels = {'all': 'All', 'open': 'Open', 'active': 'Active', 'settling': 'Settling', 'settled': 'Settled', 'cancelled': 'Cancelled'} %}
+    <div class="filters">
+      <div class="filters-topline">
+        <details class="filters-details"{% if status != 'all' or mode != 'all' or sort != 'deadline' %} open{% endif %}>
+          <summary class="filters-toggle">
+            <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+            <span class="filters-toggle-title">Filters</span>
+            {% if status != 'all' or mode != 'all' or sort != 'deadline' %}
+              <span class="filters-current">
+                {% if status != 'all' %}{{ status_labels[status] }}{% endif %}
+                {% if mode != 'all' %}{% if status != 'all' %} · {% endif %}{{ 'AI only' if mode == 'ai' else 'Vote only' }}{% endif %}
+                {% if sort != 'deadline' %}{% if status != 'all' or mode != 'all' %} · {% endif %}Sorted by {{ 'newest' if sort == 'newest' else 'biggest pool' }}{% endif %}
               </span>
-              <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
-                {% if challenge.verification_mode == 'vote' %}
-                  <i class="fa-solid fa-users"></i> Vote
-                {% else %}
-                  <i class="fa-solid fa-robot"></i> AI
-                {% endif %}
-              </span>
+            {% endif %}
+          </summary>
+          <div class="filters-panel">
+            <div class="filters-content">
+              <section class="filter-group filter-status-group">
+                <h2 class="filter-heading">Status</h2>
+                <div class="filter-pills">
+                  {% for value, label in [('all', 'All'), ('open', 'Open'), ('active', 'Active'), ('settling', 'Settling'), ('settled', 'Settled'), ('cancelled', 'Cancelled')] %}
+                    {% if value == 'all' or counts[value] > 0 %}
+                      <a class="filter-pill{% if status == value %} is-active{% endif %}"
+                         href="/challenges?status={{ value }}&amp;mode={{ mode }}&amp;sort={{ sort }}">
+                        {{ label }} {{ total_count if value == 'all' else counts[value] }}
+                      </a>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </section>
+
+              <form class="filters-form" action="/challenges" method="get">
+                <input type="hidden" name="status" value="{{ status }}">
+                <label class="filter-select-group">
+                  <span>Mode</span>
+                  {% if mode == 'ai' %}
+                    <i class="fa-solid fa-robot" aria-hidden="true"></i>
+                  {% elif mode == 'vote' %}
+                    <i class="fa-solid fa-users" aria-hidden="true"></i>
+                  {% endif %}
+                  <select name="mode">
+                    <option value="all"{% if mode == 'all' %} selected{% endif %}>All</option>
+                    <option value="ai"{% if mode == 'ai' %} selected{% endif %}>AI only</option>
+                    <option value="vote"{% if mode == 'vote' %} selected{% endif %}>Vote only</option>
+                  </select>
+                </label>
+                <label class="filter-select-group">
+                  <span>Sort</span>
+                  <select name="sort">
+                    <option value="deadline"{% if sort == 'deadline' %} selected{% endif %}>Next deadline</option>
+                    <option value="newest"{% if sort == 'newest' %} selected{% endif %}>Newest</option>
+                    <option value="pool"{% if sort == 'pool' %} selected{% endif %}>Biggest pool</option>
+                  </select>
+                </label>
+                <button class="btn-secondary filters-apply" type="submit">Apply</button>
+              </form>
             </div>
-            <span class="challenge-fee">
-              Entry: {{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN
-            </span>
           </div>
+        </details>
+        {% if status != 'all' or mode != 'all' or sort != 'deadline' %}
+          <a class="filters-clear" href="/challenges">Clear filters</a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
 
-          <h2 class="challenge-card-title">{{ challenge.title }}</h2>
-
-          <div class="challenge-card-pool">
-            <span class="pool-label">Commitment Pool</span>
-            <span class="pool-amount">
-              {{ "%.2f"|format((challenge.pool_minor | default(0)) / 100) }} PLN
-            </span>
-          </div>
-
-          {% if challenge.proof_deadline_fmt %}
-            <p class="challenge-card-deadline">
-              Proof due: <strong data-utc="{{ challenge.proof_deadline }}">{{ challenge.proof_deadline_fmt }}</strong>
-            </p>
-          {% endif %}
-        </a>
+  {% if challenges %}
+    {% if status == 'all' and sort == 'deadline' %}
+      {% for group_status, group_label, group_icon in [('open', 'Open', 'fa-door-open'), ('active', 'Active', 'fa-person-running'), ('settling', 'Settling', 'fa-hourglass-half'), ('settled', 'Settled', 'fa-circle-check'), ('cancelled', 'Cancelled', 'fa-ban')] %}
+        {% set group_challenges = challenges | selectattr('status', 'equalto', group_status) | list %}
+        {% if group_challenges %}
+          <section class="challenge-status-group">
+            <h2 class="section-heading challenge-group-heading">
+              <i class="fa-solid {{ group_icon }}" aria-hidden="true"></i>
+              {{ group_label }} ({{ counts[group_status] }})
+            </h2>
+            {{ challenge_grid(group_challenges) }}
+          </section>
+        {% endif %}
       {% endfor %}
+    {% else %}
+      {{ challenge_grid(challenges) }}
+    {% endif %}
+  {% elif total_count %}
+    <div class="challenge-filter-empty">
+      <p>No challenges match these filters</p>
+      <a href="/challenges">Clear filters</a>
     </div>
   {% else %}
     <div class="empty-state">

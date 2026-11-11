@@ -15,8 +15,10 @@ from app.db import supabase
 from app.models.challenge import ChallengeCreate
 from app.services.challenge_service import (
     create_challenge,
+    filter_and_sort_challenges,
     get_challenge_by_id,
     get_user_challenges,
+    relevant_deadline,
 )
 from app.templating import templates
 from app.services.payment_service import join_challenge
@@ -201,19 +203,57 @@ def _prepare_challenge_view(challenge: dict, user_tz: str | None = None) -> dict
 
 
 @router.get("/challenges")
-def my_challenges_page(request: Request, user: Annotated[dict, Depends(current_user)]):
+def my_challenges_page(
+    request: Request,
+    user: Annotated[dict, Depends(current_user)],
+    status: str = "all",
+    mode: str = "all",
+    sort: str = "deadline",
+):
     user_tz = request.cookies.get("user_timezone")
-    challenges = get_user_challenges(user_id=user["id"])
-    
-    for c in challenges:
-        c["join_deadline_fmt"] = _format_deadline(c.get("join_deadline"), user_tz)
-        c["proof_deadline_fmt"] = _format_deadline(c.get("proof_deadline"), user_tz)
-        c["voting_deadline_fmt"] = _format_deadline(c.get("voting_deadline"), user_tz)
+    all_challenges = get_user_challenges(user_id=user["id"])
+    counts = {
+        challenge_status: sum(
+            1 for challenge in all_challenges
+            if challenge.get("status") == challenge_status
+        )
+        for challenge_status in (
+            "open", "active", "settling", "settled", "cancelled"
+        )
+    }
+    now = datetime.now(timezone.utc)
+    challenges = filter_and_sort_challenges(
+        all_challenges, status, mode, sort, now
+    )
+
+    for challenge in challenges:
+        challenge["join_deadline_fmt"] = _format_deadline(
+            challenge.get("join_deadline"), user_tz
+        )
+        challenge["proof_deadline_fmt"] = _format_deadline(
+            challenge.get("proof_deadline"), user_tz
+        )
+        challenge["voting_deadline_fmt"] = _format_deadline(
+            challenge.get("voting_deadline"), user_tz
+        )
+        challenge["deadline_label"], deadline = relevant_deadline(
+            challenge, now
+        )
+        challenge["deadline_iso"] = deadline
+        challenge["deadline_fmt"] = _format_deadline(deadline, user_tz)
 
     return templates.TemplateResponse(
         request,
         "challenges.html",
-        {"user": user, "challenges": challenges},
+        {
+            "user": user,
+            "challenges": challenges,
+            "counts": counts,
+            "total_count": len(all_challenges),
+            "status": status if status in ("all", *counts) else "all",
+            "mode": mode if mode in ("all", "ai", "vote") else "all",
+            "sort": sort if sort in ("deadline", "newest", "pool") else "deadline",
+        },
     )
 
 
