@@ -280,5 +280,37 @@ function closeImageModal() {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeImageModal();
 });
+document.addEventListener("submit", async (e) => {
+  const form = e.target.closest(".vote-side-form");
+  if (!form) return;
+  e.preventDefault();
+
+  const row = form.closest(".vote-feed-row");
+  if (!row || row.dataset.voting === "1") return;
+  row.dataset.voting = "1";
+  row.classList.add("is-voting");
+
+  try {
+    const res = await fetch(form.action, {
+      method: "POST",
+      body: new FormData(form),
+      credentials: "same-origin",
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+
+    const newRow = doc.getElementById(row.id);
+    if (newRow) row.replaceWith(newRow);
+
+    const oldHeader = document.querySelector(".voting-header-card");
+    const newHeader = doc.querySelector(".voting-header-card");
+    if (oldHeader && newHeader) oldHeader.replaceWith(newHeader);
+  } catch (err) {
+
+    row.dataset.voting = "";
+    HTMLFormElement.prototype.submit.call(form);
+  }
+});
 </script>
 {% endblock %}

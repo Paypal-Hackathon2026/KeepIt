@@ -130,6 +130,16 @@ def mark_forfeited(challenge_id: str, user_id: str) -> None:
     )
 
 
+def mark_pending(challenge_id: str, user_id: str) -> None:
+    (
+        supabase.table("participants")
+        .update({"outcome": "pending"})
+        .eq("challenge_id", challenge_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+
 def _make_initials(name: str) -> str:
     if not name:
         return "P"
@@ -492,9 +502,8 @@ def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
     # 2. Must always be at least 3 participants in the challenge
     is_valid = (total_paid >= 3) and (total_votes >= total_paid * 0.5)
 
-    current_status = "needs_vote"
+    new_status = "needs_vote"
     if is_valid and n_eligible > 0:
-        new_status = None
         if total_votes >= n_eligible:
             # All eligible participants have voted:
             # glosy na tak > glosy na nie -> approved
@@ -505,14 +514,16 @@ def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
         elif no_votes >= (n_eligible / 2):
             new_status = "rejected"
 
-        if new_status:
-            set_status(evidence_id, new_status)
-            max_allowed_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
-            if new_status == "approved":
-                mark_verified(challenge_id, author_id)
-            elif new_status == "rejected":
-                mark_forfeited(challenge_id, author_id)
-            current_status = new_status
+    if new_status != evidence.get("status"):
+        set_status(evidence_id, new_status)
+        if new_status == "approved":
+            mark_verified(challenge_id, author_id)
+        elif new_status == "rejected":
+            mark_forfeited(challenge_id, author_id)
+        else:
+            mark_pending(challenge_id, author_id)
+
+    current_status = new_status
 
     return {
         "evidence_id": evidence_id,

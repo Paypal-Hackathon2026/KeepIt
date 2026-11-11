@@ -806,3 +806,8 @@
     border-width: 3px;
   }
 }
+
+.vote-feed-row.is-voting .btn-side-vote {
+  opacity: 0.6;
+  pointer-events: none;
+}
