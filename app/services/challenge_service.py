@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 
 PROOF_CODE_LENGTH = 8
 PROOF_CODE_ALPHABET = string.ascii_uppercase + string.digits
-
-
 def _generate_proof_code() -> str:
     """Generate a random alphanumeric proof code."""
     return "".join(

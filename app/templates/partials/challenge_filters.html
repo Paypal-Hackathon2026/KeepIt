@@ -1,0 +1,66 @@
+{% if total_count %}
+  {% set status_labels = {'all': 'All', 'open': 'Open', 'active': 'Active', 'settling': 'Settling', 'settled': 'Settled', 'cancelled': 'Cancelled'} %}
+  <div class="filters">
+    <div class="filters-topline">
+      <details class="filters-details"{% if status != 'all' or mode != 'all' or sort != 'deadline' %} open{% endif %}>
+        <summary class="filters-toggle">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+          <span class="filters-toggle-title">Filters</span>
+          {% if status != 'all' or mode != 'all' or sort != 'deadline' %}
+            <span class="filters-current">
+              {% if status != 'all' %}{{ status_labels[status] }}{% endif %}
+              {% if mode != 'all' %}{% if status != 'all' %} · {% endif %}{{ 'AI only' if mode == 'ai' else 'Vote only' }}{% endif %}
+              {% if sort != 'deadline' %}{% if status != 'all' or mode != 'all' %} · {% endif %}Sorted by {{ 'newest' if sort == 'newest' else 'biggest pool' }}{% endif %}
+            </span>
+          {% endif %}
+        </summary>
+        <div class="filters-panel">
+          <div class="filters-content">
+            <section class="filter-group filter-status-group">
+              <h2 class="filter-heading">Status</h2>
+              <div class="filter-pills">
+                {% for value, label in [('all', 'All'), ('open', 'Open'), ('active', 'Active'), ('settling', 'Settling'), ('settled', 'Settled'), ('cancelled', 'Cancelled')] %}
+                  {% if value == 'all' or counts[value] > 0 %}
+                    <a class="filter-pill{% if status == value %} is-active{% endif %}"
+                       href="/challenges?status={{ value }}&amp;mode={{ mode }}&amp;sort={{ sort }}">
+                      {{ label }} {{ total_count if value == 'all' else counts[value] }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </section>
+
+            <form class="filters-form" action="/challenges" method="get">
+              <input type="hidden" name="status" value="{{ status }}">
+              <label class="filter-select-group">
+                <span>Mode</span>
+                {% if mode == 'ai' %}
+                  <i class="fa-solid fa-robot" aria-hidden="true"></i>
+                {% elif mode == 'vote' %}
+                  <i class="fa-solid fa-users" aria-hidden="true"></i>
+                {% endif %}
+                <select name="mode">
+                  <option value="all"{% if mode == 'all' %} selected{% endif %}>All</option>
+                  <option value="ai"{% if mode == 'ai' %} selected{% endif %}>AI only</option>
+                  <option value="vote"{% if mode == 'vote' %} selected{% endif %}>Vote only</option>
+                </select>
+              </label>
+              <label class="filter-select-group">
+                <span>Sort</span>
+                <select name="sort">
+                  <option value="deadline"{% if sort == 'deadline' %} selected{% endif %}>Next deadline</option>
+                  <option value="newest"{% if sort == 'newest' %} selected{% endif %}>Newest</option>
+                  <option value="pool"{% if sort == 'pool' %} selected{% endif %}>Biggest pool</option>
+                </select>
+              </label>
+              <button class="btn-secondary filters-apply" type="submit">Apply</button>
+            </form>
+          </div>
+        </div>
+      </details>
+      {% if status != 'all' or mode != 'all' or sort != 'deadline' %}
+        <a class="filters-clear" href="/challenges">Clear filters</a>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}

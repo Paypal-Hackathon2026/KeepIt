@@ -4,7 +4,49 @@
 
 {% block styles %}
   <link rel="stylesheet" href="/static/css/challenges.css">
+  <link rel="stylesheet" href="/static/css/challenge_filters.css">
 {% endblock %}
+
+{% macro challenge_grid(challenges) %}
+  <div class="challenges-grid">
+    {% for challenge in challenges %}
+      <a href="/challenges/{{ challenge.id }}" class="challenge-card">
+        <div class="challenge-card-top">
+          <div class="card-badges">
+            <span class="status-badge status-{{ challenge.status }}">
+              {{ challenge.status | capitalize }}
+            </span>
+            <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
+              {% if challenge.verification_mode == 'vote' %}
+                <i class="fa-solid fa-users"></i> Vote
+              {% else %}
+                <i class="fa-solid fa-robot"></i> AI
+              {% endif %}
+            </span>
+          </div>
+          <span class="challenge-fee">
+            Entry: {{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN
+          </span>
+        </div>
+
+        <h2 class="challenge-card-title">{{ challenge.title }}</h2>
+
+        <div class="challenge-card-pool">
+          <span class="pool-label">Commitment Pool</span>
+          <span class="pool-amount">
+            {{ "%.2f"|format((challenge.pool_minor | default(0)) / 100) }} PLN
+          </span>
+        </div>
+
+        {% if challenge.deadline_fmt %}
+          <p class="challenge-card-deadline">
+            {{ challenge.deadline_label }}: <strong data-utc="{{ challenge.deadline_iso }}">{{ challenge.deadline_fmt }}</strong>
+          </p>
+        {% endif %}
+      </a>
+    {% endfor %}
+  </div>
+{% endmacro %}
 
 {% block content %}
 <section class="challenges-section">
@@ -13,44 +55,26 @@
     <a href="/challenges/new" class="btn-primary mobile-new-btn">+ New challenge</a>
   </div>
 
+  {% include "partials/challenge_filters.html" %}
+
   {% if challenges %}
-    <div class="challenges-grid">
-      {% for challenge in challenges %}
-        <a href="/challenges/{{ challenge.id }}" class="challenge-card">
-          <div class="challenge-card-top">
-            <div class="card-badges">
-              <span class="status-badge status-{{ challenge.status }}">
-                {{ challenge.status | capitalize }}
-              </span>
-              <span class="mode-badge mode-{{ challenge.verification_mode | default('ai') }}">
-                {% if challenge.verification_mode == 'vote' %}
-                  <i class="fa-solid fa-users"></i> Vote
-                {% else %}
-                  <i class="fa-solid fa-robot"></i> AI
-                {% endif %}
-              </span>
-            </div>
-            <span class="challenge-fee">
-              Entry: {{ "%.2f"|format(challenge.entry_fee_minor / 100) }} PLN
-            </span>
-          </div>
-
-          <h2 class="challenge-card-title">{{ challenge.title }}</h2>
-
-          <div class="challenge-card-pool">
-            <span class="pool-label">Commitment Pool</span>
-            <span class="pool-amount">
-              {{ "%.2f"|format((challenge.pool_minor | default(0)) / 100) }} PLN
-            </span>
-          </div>
-
-          {% if challenge.proof_deadline_fmt %}
-            <p class="challenge-card-deadline">
-              Proof due: <strong data-utc="{{ challenge.proof_deadline }}">{{ challenge.proof_deadline_fmt }}</strong>
-            </p>
-          {% endif %}
-        </a>
+    {% if status == 'all' and sort == 'deadline' %}
+      {% for group_status, group_label in [('open', 'Open'), ('active', 'Active'), ('voting', 'Voting'), ('settling', 'Settling'), ('settled', 'Settled'), ('cancelled', 'Cancelled')] %}
+        {% set group_challenges = challenges | selectattr('status', 'equalto', group_status) | list %}
+        {% if group_challenges %}
+          <section class="challenge-status-group">
+            <h2 class="group-label">{{ group_label }}</h2>
+            {{ challenge_grid(group_challenges) }}
+          </section>
+        {% endif %}
       {% endfor %}
+    {% else %}
+      {{ challenge_grid(challenges) }}
+    {% endif %}
+  {% elif total_count %}
+    <div class="challenge-filter-empty">
+      <p>No challenges match these filters</p>
+      <a href="/challenges">Clear filters</a>
     </div>
   {% else %}
     <div class="empty-state">
