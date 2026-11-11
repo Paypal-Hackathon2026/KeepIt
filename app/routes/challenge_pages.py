@@ -15,9 +15,12 @@ from app.db import supabase
 from app.models.challenge import ChallengeCreate
 from app.services.challenge_service import (
     create_challenge,
-    filter_and_sort_challenges,
     get_challenge_by_id,
     get_user_challenges,
+)
+from app.services.challenge_filters import (
+    CHALLENGE_STATUSES,
+    filter_and_sort_challenges,
     relevant_deadline,
 )
 from app.templating import templates
@@ -217,9 +220,7 @@ def my_challenges_page(
             1 for challenge in all_challenges
             if challenge.get("status") == challenge_status
         )
-        for challenge_status in (
-            "open", "active", "settling", "settled", "cancelled"
-        )
+        for challenge_status in CHALLENGE_STATUSES
     }
     now = datetime.now(timezone.utc)
     challenges = filter_and_sort_challenges(

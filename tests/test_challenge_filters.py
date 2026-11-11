@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from app.services.challenge_service import (
+from app.services.challenge_filters import (
     filter_and_sort_challenges,
     relevant_deadline,
 )
