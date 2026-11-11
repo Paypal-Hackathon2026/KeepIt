@@ -1,0 +1,156 @@
+
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 24px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--orange);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-pop);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+}
+
+.btn-primary:hover {
+  background: var(--orange-dark);
+}
+
+.btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--blue);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  min-height: 40px;
+  padding: 8px 18px;
+  margin: 0;
+  border: 2px solid var(--blue);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--blue);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--pink);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.btn-secondary:hover {
+  background: #e8edff;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--pink);
+}
+
+.btn-secondary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--pink);
+}
+
+.btn-full {
+  width: 100%;
+  font-size: 18px;
+  min-height: 52px;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--cream-dark);
+  color: var(--text);
+}
+
+.status-open {
+  background: #e3f2fd;
+  color: var(--blue);
+}
+
+.status-active {
+  background: #fff3cd;
+  color: #b26a00;
+}
+
+.status-settled {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.status-settling {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.status-closed {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.status-voting {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.status-cancelled {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+.detail-badges,
+.card-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.mode-ai {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border-color: #d8b4fe;
+}
+
+.mode-vote {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.btn-primary:disabled {
+  gap: 8px;
+  opacity: 0.85;
+  cursor: wait;
+}

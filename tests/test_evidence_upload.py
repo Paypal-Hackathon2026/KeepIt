@@ -7,7 +7,8 @@ from starlette.testclient import TestClient
 
 from app.deps import current_user
 from app.main import app
-from app.routes import challenge_pages
+from app.routes import evidence_pages
+from app.services import proof_service
 
 
 MOCK_USER = {
@@ -59,12 +60,12 @@ def test_upload_evidence_requires_paid_participant(
 ):
     challenge_id = uuid4()
     monkeypatch.setattr(
-        challenge_pages,
+        evidence_pages,
         "get_challenge_by_id",
         lambda challenge_id: _challenge(challenge_id, participant),
     )
     monkeypatch.setattr(
-        challenge_pages,
+        proof_service,
         "save_evidence",
         lambda *args, **kwargs: pytest.fail("Evidence should not be saved"),
     )
@@ -85,20 +86,20 @@ def test_upload_evidence_rejects_file_over_15_mb(client, monkeypatch):
         "outcome": "pending",
     }
     monkeypatch.setattr(
-        challenge_pages,
+        evidence_pages,
         "get_challenge_by_id",
         lambda challenge_id: _challenge(challenge_id, participant),
     )
-    monkeypatch.setattr(challenge_pages, "get_my_evidence", lambda *args: [])
+    monkeypatch.setattr(evidence_pages, "get_my_evidence", lambda *args: [])
     save_mock = Mock()
-    monkeypatch.setattr(challenge_pages, "save_evidence", save_mock)
+    monkeypatch.setattr(proof_service, "save_evidence", save_mock)
 
     response = client.post(
         f"/challenges/{challenge_id}/evidence",
         files={
             "photo": (
                 "large.jpg",
-                b"x" * (challenge_pages.MAX_UPLOAD_BYTES + 1),
+                b"x" * (evidence_pages.MAX_UPLOAD_BYTES + 1),
                 "image/jpeg",
             )
         },
@@ -120,13 +121,13 @@ def test_upload_evidence_rejects_non_image(client, monkeypatch):
         "outcome": "pending",
     }
     monkeypatch.setattr(
-        challenge_pages,
+        evidence_pages,
         "get_challenge_by_id",
         lambda challenge_id: _challenge(challenge_id, participant),
     )
-    monkeypatch.setattr(challenge_pages, "get_my_evidence", lambda *args: [])
+    monkeypatch.setattr(evidence_pages, "get_my_evidence", lambda *args: [])
     monkeypatch.setattr(
-        challenge_pages,
+        proof_service,
         "save_evidence",
         _reject_non_image,
     )
@@ -152,23 +153,23 @@ def test_upload_evidence_success_redirects_as_uploaded(client, monkeypatch):
     }
     jpeg = b"converted-jpeg"
     monkeypatch.setattr(
-        challenge_pages,
+        evidence_pages,
         "get_challenge_by_id",
         lambda challenge_id: _challenge(challenge_id, participant),
     )
-    monkeypatch.setattr(challenge_pages, "get_my_evidence", lambda *args: [])
+    monkeypatch.setattr(evidence_pages, "get_my_evidence", lambda *args: [])
     monkeypatch.setattr(
-        challenge_pages,
+        proof_service,
         "save_evidence",
         lambda *args, **kwargs: ({"id": "evidence-1", "attempt": 1}, jpeg),
     )
-    monkeypatch.setattr(challenge_pages, "judge", lambda *args: (object(), "test-model"))
-    monkeypatch.setattr(challenge_pages, "save_verdict", lambda *args: {})
-    monkeypatch.setattr(challenge_pages, "decide", lambda verdict: "auto_approved")
+    monkeypatch.setattr(proof_service, "judge", lambda *args: (object(), "test-model"))
+    monkeypatch.setattr(proof_service, "save_verdict", lambda *args: {})
+    monkeypatch.setattr(proof_service, "decide", lambda verdict: "auto_approved")
     mock_set_status = Mock()
-    monkeypatch.setattr(challenge_pages, "set_status", mock_set_status)
+    monkeypatch.setattr(proof_service, "set_status", mock_set_status)
     mock_mark_verified = Mock()
-    monkeypatch.setattr(challenge_pages, "mark_verified", mock_mark_verified)
+    monkeypatch.setattr(proof_service, "mark_verified", mock_mark_verified)
 
     response = client.post(
         f"/challenges/{challenge_id}/evidence",

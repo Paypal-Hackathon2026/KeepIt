@@ -3,8 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import config
-from app.routes import auth, pages, paypal, challenge_pages
-from app.routes.challenges import router as challenges_router
+from app.routes import auth, pages, paypal, challenges, challenge_pages, payment_pages, evidence_pages, voting_pages
 import asyncio
 from contextlib import asynccontextmanager
 from app.services.loops import check_challenges_ready_for_settlement,sync_challenge_statuses
@@ -32,8 +31,11 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(auth.router)
 app.include_router(pages.router)
 app.include_router(paypal.router)
-app.include_router(challenges_router)
+app.include_router(challenges.router)
 app.include_router(challenge_pages.router)
+app.include_router(payment_pages.router)
+app.include_router(evidence_pages.router)
+app.include_router(voting_pages.router)
 
 
 @app.get("/health")

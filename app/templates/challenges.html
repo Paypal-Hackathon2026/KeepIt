@@ -3,7 +3,8 @@
 {% block title %}My Challenges · KeepIt{% endblock %}
 
 {% block styles %}
-  <link rel="stylesheet" href="/static/css/challenges.css">
+  <link rel="stylesheet" href="/static/css/components.css?v=9">
+  <link rel="stylesheet" href="/static/css/challenge_list.css?v=9">
   <link rel="stylesheet" href="/static/css/challenge_filters.css">
 {% endblock %}
 
@@ -59,11 +60,11 @@
 
   {% if challenges %}
     {% if status == 'all' and sort == 'deadline' %}
-      {% for group_status, group_label in [('open', 'Open'), ('active', 'Active'), ('voting', 'Voting'), ('settling', 'Settling'), ('settled', 'Settled'), ('cancelled', 'Cancelled')] %}
+      {% for group_status in statuses %}
         {% set group_challenges = challenges | selectattr('status', 'equalto', group_status) | list %}
         {% if group_challenges %}
           <section class="challenge-status-group">
-            <h2 class="group-label">{{ group_label }}</h2>
+            <h2 class="group-label">{{ status_labels[group_status] }}</h2>
             {{ challenge_grid(group_challenges) }}
           </section>
         {% endif %}

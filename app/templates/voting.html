@@ -3,7 +3,9 @@
 {% block title %}Voting · {{ challenge.title }} · KeepIt{% endblock %}
 
 {% block styles %}
-  <link rel="stylesheet" href="/static/css/challenges.css?v=9">
+  <link rel="stylesheet" href="/static/css/components.css?v=9">
+  <link rel="stylesheet" href="/static/css/challenge_detail.css?v=9">
+  <link rel="stylesheet" href="/static/css/voting.css?v=9">
 {% endblock %}
 
 {% block content %}
@@ -305,7 +307,7 @@ document.addEventListener("submit", async (e) => {
     const newHeader = doc.querySelector(".voting-header-card");
     if (oldHeader && newHeader) oldHeader.replaceWith(newHeader);
   } catch (err) {
-  
+
     row.dataset.voting = "";
     HTMLFormElement.prototype.submit.call(form);
   }

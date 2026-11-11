@@ -1,5 +1,4 @@
 {% if total_count %}
-  {% set status_labels = {'all': 'All', 'open': 'Open', 'active': 'Active', 'settling': 'Settling', 'settled': 'Settled', 'cancelled': 'Cancelled'} %}
   <div class="filters">
     <div class="filters-topline">
       <details class="filters-details"{% if status != 'all' or mode != 'all' or sort != 'deadline' %} open{% endif %}>
@@ -19,11 +18,11 @@
             <section class="filter-group filter-status-group">
               <h2 class="filter-heading">Status</h2>
               <div class="filter-pills">
-                {% for value, label in [('all', 'All'), ('open', 'Open'), ('active', 'Active'), ('settling', 'Settling'), ('settled', 'Settled'), ('cancelled', 'Cancelled')] %}
+                {% for value in ['all'] + statuses|list %}
                   {% if value == 'all' or counts[value] > 0 %}
                     <a class="filter-pill{% if status == value %} is-active{% endif %}"
                        href="/challenges?status={{ value }}&amp;mode={{ mode }}&amp;sort={{ sort }}">
-                      {{ label }} {{ total_count if value == 'all' else counts[value] }}
+                      {{ 'All' if value == 'all' else status_labels[value] }} {{ total_count if value == 'all' else counts[value] }}
                     </a>
                   {% endif %}
                 {% endfor %}

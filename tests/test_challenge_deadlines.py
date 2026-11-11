@@ -126,7 +126,7 @@ def test_pay_blocked_when_challenge_not_open():
         "participants": [],
     }
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_active):
+    with patch("app.routes.payment_pages.get_challenge_by_id", return_value=mock_challenge_active):
         resp = client.post(f"/challenges/{challenge_id}/pay")
         assert resp.status_code == 400
         assert "Joining this challenge is closed" in resp.json()["detail"]
@@ -157,8 +157,8 @@ def test_upload_evidence_blocked_when_proof_deadline_passed():
     img.save(buf, format="JPEG")
     fake_photo = buf.getvalue()
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge_voting), \
-         patch("app.routes.challenge_pages.get_my_evidence", return_value=[]):
+    with patch("app.routes.evidence_pages.get_challenge_by_id", return_value=mock_challenge_voting), \
+         patch("app.routes.evidence_pages.get_my_evidence", return_value=[]):
         resp = client.post(
             f"/challenges/{challenge_id}/evidence",
             files={"photo": ("proof.jpg", fake_photo, "image/jpeg")},
