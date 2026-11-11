@@ -511,7 +511,7 @@ def test_post_vote_endpoint_form_redirects():
         "status": "needs_vote",
     }
 
-    with patch("app.routes.challenge_pages.cast_vote", return_value=mock_result) as mock_cast:
+    with patch("app.routes.voting_pages.cast_vote", return_value=mock_result) as mock_cast:
         resp = client.post(
             f"/evidence/{evidence_id}/vote",
             data={"approve": "true"},
@@ -538,7 +538,7 @@ def test_post_vote_endpoint_json():
         "status": "rejected",
     }
 
-    with patch("app.routes.challenge_pages.cast_vote", return_value=mock_result) as mock_cast:
+    with patch("app.routes.voting_pages.cast_vote", return_value=mock_result) as mock_cast:
         resp = client.post(
             f"/evidence/{evidence_id}/vote",
             json={"approve": False},
@@ -726,8 +726,8 @@ def test_voting_subpage_renders_proofs_and_modal():
         }
     ]
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.get_voting_feed", return_value=mock_pending):
+    with patch("app.routes.voting_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.voting_pages.get_voting_feed", return_value=mock_pending):
 
         resp = client.get(f"/challenges/{challenge_id}/voting")
         assert resp.status_code == 200
@@ -787,8 +787,8 @@ def test_voting_subpage_when_user_already_voted_on_all():
         }
     ]
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.get_pending_votes_for_user", return_value=mock_pending):
+    with patch("app.routes.voting_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.voting_pages.get_pending_votes_for_user", return_value=mock_pending):
 
         resp = client.get(f"/challenges/{challenge_id}/voting")
         assert resp.status_code == 200
@@ -812,7 +812,7 @@ def test_post_vote_endpoint_with_return_to_redirects():
         "status": "needs_vote",
     }
 
-    with patch("app.routes.challenge_pages.cast_vote", return_value=mock_result) as mock_cast:
+    with patch("app.routes.voting_pages.cast_vote", return_value=mock_result) as mock_cast:
         resp = client.post(
             f"/evidence/{evidence_id}/vote",
             data={"approve": "true", "return_to": f"/challenges/{challenge_id}/voting"},
@@ -898,8 +898,8 @@ def test_voting_subpage_chat_layout_me_on_right_others_on_left():
         },
     ]
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.get_voting_feed", return_value=mock_feed):
+    with patch("app.routes.voting_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.voting_pages.get_voting_feed", return_value=mock_feed):
 
         resp = client.get(f"/challenges/{challenge_id}/voting")
         assert resp.status_code == 200
@@ -980,7 +980,7 @@ def test_voting_notifications_hidden_when_challenge_is_settling_or_closed():
         # 1. Detail page check
         with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
              patch("app.routes.challenge_pages.get_my_evidence", return_value=[]), \
-             patch("app.routes.challenge_pages.get_voting_feed", return_value=[]), \
+             patch("app.routes.voting_pages.get_voting_feed", return_value=[]), \
              patch("app.routes.challenge_pages.get_pending_votes_for_user", return_value=mock_pending):
 
             resp = client.get(f"/challenges/{challenge_id}")
@@ -989,8 +989,8 @@ def test_voting_notifications_hidden_when_challenge_is_settling_or_closed():
             assert "Community Voting Active" not in resp.text
 
         # 2. Voting page check
-        with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-             patch("app.routes.challenge_pages.get_voting_feed", return_value=mock_pending):
+        with patch("app.routes.voting_pages.get_challenge_by_id", return_value=mock_challenge), \
+             patch("app.routes.voting_pages.get_voting_feed", return_value=mock_pending):
 
             resp = client.get(f"/challenges/{challenge_id}/voting")
             assert resp.status_code == 200
@@ -1094,8 +1094,8 @@ def test_ai_mode_voting_page_only_shows_needs_vote_photos():
         },
     ]
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.get_voting_feed", return_value=raw_feed_items):
+    with patch("app.routes.voting_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.voting_pages.get_voting_feed", return_value=raw_feed_items):
 
         resp = client.get(f"/challenges/{challenge_id}/voting")
         assert resp.status_code == 200
@@ -1176,8 +1176,8 @@ def test_group_voting_mode_shows_approved_and_rejected_photos_on_voting_page():
         },
     ]
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.get_voting_feed", return_value=raw_feed_items):
+    with patch("app.routes.voting_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.voting_pages.get_voting_feed", return_value=raw_feed_items):
 
         resp = client.get(f"/challenges/{challenge_id}/voting")
         assert resp.status_code == 200
@@ -1340,8 +1340,8 @@ def test_vote_only_challenge_first_user_photo_visible_and_votable_by_subsequent_
         }
     ]
 
-    with patch("app.routes.challenge_pages.get_challenge_by_id", return_value=mock_challenge), \
-         patch("app.routes.challenge_pages.get_voting_feed", return_value=mock_feed):
+    with patch("app.routes.voting_pages.get_challenge_by_id", return_value=mock_challenge), \
+         patch("app.routes.voting_pages.get_voting_feed", return_value=mock_feed):
 
         resp = client.get(f"/challenges/{challenge_id}/voting")
         assert resp.status_code == 200

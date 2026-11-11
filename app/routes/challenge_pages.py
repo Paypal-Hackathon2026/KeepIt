@@ -1,17 +1,13 @@
-import logging
 from datetime import datetime, timezone, timedelta
 from typing import Annotated
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
-logger = logging.getLogger(__name__)
-
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, File, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
-from PIL import Image, UnidentifiedImageError
 
 from app.deps import current_user
-from app.db import supabase
 from app.models.challenge import ChallengeCreate
 from app.services.challenge_service import (
     create_challenge,
@@ -23,33 +19,23 @@ from app.services.challenge_filters import (
     filter_and_sort_challenges,
     relevant_deadline,
 )
-from app.templating import templates
-from app.services.payment_service import join_challenge
 from app.services.evidence import (
     MAX_ATTEMPTS,
     get_my_evidence,
     get_pending_votes_for_user,
-    get_voting_feed,
-    cast_vote,
-    save_evidence,
-    send_to_vote,
-    set_status,
-    mark_verified,
-    mark_forfeited
 )
-from app.services.arbiter import judge, save_verdict, decide
 from app.services.settlement_service import settle
+from app.routes.helpers import (
+    PROOF_ERRORS,
+    _find_participant,
+    _format_deadline,
+    _prepare_challenge_view,
+)
+from app.templating import templates
 
-MAX_UPLOAD_BYTES = 15 * 1024 * 1024
-PROOF_ERRORS = {
-    "too_big": "Photo is too big (max 15 MB).",
-    "not_image": "This file is not a photo. Try again.",
-    "no_attempts": "You have already used all allowed attempts.",
-    "closed": "You can't upload more photos for this challenge.",
-    "needs_vote": "Your photo has been sent to other participants for voting. You cannot upload more photos.",
-}
-from zoneinfo import ZoneInfo,ZoneInfoNotFoundError
 router = APIRouter()
+
+
 def _to_utc(
     dt_local_str: str,
     dt_utc_str: str = "",
@@ -90,25 +76,36 @@ def _to_utc(
             pass
     return dt.replace(tzinfo=timezone.utc)
 
+
 @router.get("/challenges/new")
-def new_challenge_page(request: Request, user: dict = Depends(current_user)):
-    return templates.TemplateResponse(request, "new_challenge.html",
-                                       {"user": user, "errors": {}, "values": {"verification_mode": "ai", "voting_deadline": ""}})
+def new_challenge_page(
+    request: Request,
+    user: Annotated[dict, Depends(current_user)],
+):
+    return templates.TemplateResponse(
+        request,
+        "new_challenge.html",
+        {"user": user, "errors": {}, "values": {"verification_mode": "ai", "voting_deadline": ""}},
+    )
+
+
 @router.post("/challenges/new")
-def created_challenge(request: Request,
-                      title: str = Form(""),
-                      criteria: str = Form(""),
-                      entry_fee_pln: str = Form(""),
-                      join_deadline: str = Form(""),
-                      proof_deadline: str = Form(""),
-                      voting_deadline: str = Form(""),
-                      verification_mode: str = Form("ai"),
-                      user_timezone: str = Form(""),
-                      tz_offset_minutes: str = Form(""),
-                      join_deadline_utc: str = Form(""),
-                      proof_deadline_utc: str = Form(""),
-                      voting_deadline_utc: str = Form(""),
-                      user: dict = Depends(current_user)):
+def created_challenge(
+    request: Request,
+    user: Annotated[dict, Depends(current_user)],
+    title: str = Form(""),
+    criteria: str = Form(""),
+    entry_fee_pln: str = Form(""),
+    join_deadline: str = Form(""),
+    proof_deadline: str = Form(""),
+    voting_deadline: str = Form(""),
+    verification_mode: str = Form("ai"),
+    user_timezone: str = Form(""),
+    tz_offset_minutes: str = Form(""),
+    join_deadline_utc: str = Form(""),
+    proof_deadline_utc: str = Form(""),
+    voting_deadline_utc: str = Form(""),
+):
     values = {
         "title": title,
         "criteria": criteria,
@@ -136,20 +133,23 @@ def created_challenge(request: Request,
             create_kwargs["voting_deadline"] = parsed_voting
         challenge_data = ChallengeCreate(**create_kwargs)
     except ValidationError as e:
-        errors={}
+        errors = {}
         for error in e.errors():
-            loc=error["loc"]
-            msg=error["msg"]
+            loc = error["loc"]
+            msg = error["msg"]
             if msg.startswith("Value error, "):
-                msg=msg.replace("Value error, ", "")
+                msg = msg.replace("Value error, ", "")
             if loc:
-                field_name=str(loc[0])
-                errors[field_name]=msg
+                field_name = str(loc[0])
+                errors[field_name] = msg
             else:
-                errors["general"]=msg
-        return templates.TemplateResponse(request, "new_challenge.html",
-                                             {"user": user, "errors": errors, "values": values},
-                                             status_code=422,)
+                errors["general"] = msg
+        return templates.TemplateResponse(
+            request,
+            "new_challenge.html",
+            {"user": user, "errors": errors, "values": values},
+            status_code=422,
+        )
     try:
         new_challenge = create_challenge(challenge_data, creator_id=user["id"])
     except HTTPException as e:
@@ -160,49 +160,6 @@ def created_challenge(request: Request,
             status_code=500,
         )
     return RedirectResponse(url=f"/challenges/{new_challenge['id']}", status_code=303)
-    
-
-def _format_deadline(value, user_tz: str | None = None) -> str:
-    """
-    Turn an ISO datetime string or datetime object into a readable string in the user's local time.
-    """
-    if not value:
-        return ""
-    if isinstance(value, str):
-        try:
-            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except Exception:
-            s = str(value).replace("T", " ")
-            return s[:16]
-    if isinstance(value, datetime):
-        tz = None
-        if user_tz:
-            try:
-                tz = ZoneInfo(user_tz.strip())
-            except Exception:
-                tz = None
-        if tz is not None:
-            if value.tzinfo is not None:
-                value = value.astimezone(tz)
-            else:
-                value = value.replace(tzinfo=timezone.utc).astimezone(tz)
-        elif value.tzinfo is not None:
-            value = value.astimezone(timezone.utc)
-        return value.strftime("%Y-%m-%d %H:%M")
-    s = str(value).replace("T", " ")
-    return s[:16]
-
-
-def _prepare_challenge_view(challenge: dict, user_tz: str | None = None) -> dict:
-    """
-    Format deadline and participant timestamps for display.
-    """
-    challenge["join_deadline_fmt"] = _format_deadline(challenge.get("join_deadline"), user_tz)
-    challenge["proof_deadline_fmt"] = _format_deadline(challenge.get("proof_deadline"), user_tz)
-    challenge["voting_deadline_fmt"] = _format_deadline(challenge.get("voting_deadline"), user_tz)
-    for p in challenge.get("participants", []):
-        p["joined_at_fmt"] = _format_deadline(p.get("joined_at"), user_tz)
-    return challenge
 
 
 @router.get("/challenges")
@@ -268,9 +225,8 @@ def challenge_detail_page(
     vote: str | None = None,
     vote_error: str | None = None,
 ):
-    
     challenge = get_challenge_by_id(challenge_id)
-    
+
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
 
@@ -278,10 +234,7 @@ def challenge_detail_page(
     _prepare_challenge_view(challenge, user_tz)
 
     participants = challenge.get("participants", [])
-    my_participant = next(
-        (p for p in participants if str(p.get("user_id")) == str(user["id"])),
-        None,
-    )
+    my_participant = _find_participant(challenge, user["id"])
     has_paid = bool(my_participant and my_participant.get("paid"))
     attempts = get_my_evidence(str(challenge_id), str(user["id"])) if has_paid else []
     verification_mode = challenge.get("verification_mode", "ai")
@@ -310,16 +263,15 @@ def challenge_detail_page(
         else 0
     )
     max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
-    has_needs_vote=any(a.get("status")=="needs_vote" for a in attempts)
-    ALLOWED_STATUSES = ["active", "closed", "voting"]
+    has_needs_vote = any(a.get("status") == "needs_vote" for a in attempts)
+    allowed_statuses = ["active", "closed", "voting"]
     creator_id = challenge.get("creator_id")
     is_owner = bool(creator_id and str(creator_id) == str(user.get("id")))
     paid_participants = [p for p in participants if p.get("paid")]
     all_resolved = bool(paid_participants) and all(p.get("outcome") != "pending" for p in paid_participants)
-    payouts=challenge.get("payouts", [])
-    has_failed_payouts=any(p.get("status")=="failed" for p in payouts)
-    can_settle = is_owner and (challenge.get("status") in ALLOWED_STATUSES) and (all_resolved or challenge.get("status") == "closed") or (challenge.get("status") == "closed" and has_failed_payouts)
-
+    payouts = challenge.get("payouts", [])
+    has_failed_payouts = any(p.get("status") == "failed" for p in payouts)
+    can_settle = is_owner and (challenge.get("status") in allowed_statuses) and (all_resolved or challenge.get("status") == "closed") or (challenge.get("status") == "closed" and has_failed_payouts)
 
     return templates.TemplateResponse(
         request,
@@ -373,143 +325,12 @@ def challenge_state_fragment(
             "has_failed_payouts": has_failed_payouts,
         },
     )
-@router.post("/challenges/{challenge_id}/pay")
-def pay_for_challenge(
-    challenge_id: UUID,
-    user: dict = Depends(current_user),
-):
-    challenge = get_challenge_by_id(challenge_id)
-    if not challenge:
-        raise HTTPException(status_code=404, detail="Challenge not found")
-    if challenge.get("status") != "open":
-        raise HTTPException(status_code=400, detail="Joining this challenge is closed (join deadline has passed)")
 
-    result = join_challenge(challenge_id=str(challenge_id), user_id=str(user["id"]))
-    return RedirectResponse(url=result["approve_url"], status_code=303)
 
-@router.get("/challenges/{challenge_id}/payment/success")
-def payment_success(
-    challenge_id: UUID,
-    request: Request,
-    user: dict = Depends(current_user)):
-    return templates.TemplateResponse(
-        request,
-        "payment_success.html",
-        {
-            "user": user,
-            "challenge_id": challenge_id,
-        })
-@router.get("/challenges/{challenge_id}/payment/cancelled")
-def payment_cancel(
-    challenge_id:UUID,
-    request: Request,
-    user: dict = Depends(current_user)):
-    return templates.TemplateResponse(
-        request,
-        "payment_cancel.html",
-        {
-            "user": user,
-            "challenge_id": challenge_id,
-        })
-@router.get("/challenges/{challenge_id}/payment/already_completed")
-def payment_already_completed(
-    challenge_id:UUID,
-    request: Request,
-    user: dict = Depends(current_user)):
-    return templates.TemplateResponse(
-        request,
-        "payment_already_completed.html",
-        {
-            "user": user,
-            "challenge_id": challenge_id,
-        })
-
-@router.post("/challenges/{challenge_id}/evidence")
-def upload_evidence(
-    challenge_id: UUID,
-    photo: UploadFile = File(...),
-    user: dict = Depends(current_user),
-):
-    back = f"/challenges/{challenge_id}"
-
-    challenge = get_challenge_by_id(challenge_id)
-    if not challenge:
-        raise HTTPException(status_code=404, detail="Challenge not found")
-
-    me = next(
-        (p for p in challenge.get("participants", [])
-         if str(p.get("user_id")) == str(user["id"])),
-        None,
-    )
-    if not me or not me.get("paid"):
-        raise HTTPException(status_code=403, detail="Only paid participants can upload proof")
-
-    if me.get("outcome") != "pending":
-        return RedirectResponse(f"{back}?proof_error=closed", status_code=303)
-    user_attempts = get_my_evidence(str(challenge_id), str(user["id"]))
-    if any(a.get("status") == "needs_vote" for a in user_attempts):
-        return RedirectResponse(f"{back}?proof_error=needs_vote", status_code=303)
-
-    now = datetime.now(timezone.utc)
-    proof_dl = challenge.get("proof_deadline")
-    if isinstance(proof_dl, str):
-        proof_dl = datetime.fromisoformat(proof_dl.replace("Z", "+00:00"))
-    if proof_dl and proof_dl.tzinfo is None:
-        proof_dl = proof_dl.replace(tzinfo=timezone.utc)
-
-    if (proof_dl and now >= proof_dl) or challenge.get("status") not in ("open", "active"):
-        return RedirectResponse(f"{back}?proof_error=closed", status_code=303)
-
-    data = photo.file.read(MAX_UPLOAD_BYTES + 1)
-    if len(data) > MAX_UPLOAD_BYTES:
-        return RedirectResponse(f"{back}?proof_error=too_big", status_code=303)
-
-    verification_mode = challenge.get("verification_mode", "ai")
-    max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
-    paid_participants = [p for p in challenge.get("participants", []) if p.get("paid")]
-
-    if verification_mode == "vote":
-        initial_status = "needs_vote"
-        proof_param = "proof=needs_vote"
-    else:
-        initial_status = "pending"
-        proof_param = "proof=uploaded"
-
-    try:
-        evidence, jpeg = save_evidence(
-            str(challenge_id),
-            str(user["id"]),
-            data,
-            status=initial_status,
-            max_attempts=max_attempts,
-        )
-    except ValueError:
-        return RedirectResponse(f"{back}?proof_error=no_attempts", status_code=303)
-    except (UnidentifiedImageError, Image.DecompressionBombError):
-        return RedirectResponse(f"{back}?proof_error=not_image", status_code=303)
-
-    if verification_mode == "vote":
-        return RedirectResponse(f"{back}?{proof_param}", status_code=303)
-
-    try:
-        verdict, model = judge(jpeg, challenge["title"], challenge["criteria"], challenge["proof_code"])
-        save_verdict(evidence["id"], verdict, model)
-        status = decide(verdict)
-        set_status(evidence["id"], status)
-        if status == "auto_approved":
-            mark_verified(str(challenge_id), str(user["id"]))
-        elif status in ("rejected", "auto_rejected") and evidence["attempt"] == max_attempts:
-            mark_forfeited(str(challenge_id), str(user["id"]))
-    except Exception as exc:
-        logger.exception("AI Arbiter check failed for evidence %s: %s", evidence.get("id"), exc)
-        send_to_vote(evidence["id"])
-        return RedirectResponse(f"{back}?proof=sent_to_vote", status_code=303)
-
-    return RedirectResponse(f"{back}?proof={status}", status_code=303)
 @router.post("/challenges/{challenge_id}/settle")
 def settle_challenge(
     challenge_id: UUID,
-    user: dict = Depends(current_user),
+    user: Annotated[dict, Depends(current_user)],
 ):
     challenge = get_challenge_by_id(challenge_id)
     if not challenge:
@@ -518,184 +339,3 @@ def settle_challenge(
         raise HTTPException(status_code=403, detail="Only the challenge creator can settle the challenge")
     settle(challenge_id)
     return RedirectResponse(url=f"/challenges/{challenge_id}", status_code=303)
-
-
-@router.get("/challenges/{challenge_id}/voting")
-def voting_page(
-    challenge_id: UUID,
-    request: Request,
-    user: Annotated[dict, Depends(current_user)],
-    vote: str | None = None,
-    vote_error: str | None = None,
-):
-    challenge = get_challenge_by_id(challenge_id)
-    if not challenge:
-        raise HTTPException(status_code=404, detail="Challenge not found")
-
-    user_tz = request.cookies.get("user_timezone")
-    _prepare_challenge_view(challenge, user_tz)
-
-    participants = challenge.get("participants", [])
-    my_participant = next(
-        (p for p in participants if str(p.get("user_id")) == str(user["id"])),
-        None,
-    )
-    has_paid = bool(my_participant and my_participant.get("paid"))
-    if not has_paid:
-        raise HTTPException(status_code=403, detail="Only paid participants can access voting")
-
-    verification_mode = challenge.get("verification_mode") or "ai"
-    now = datetime.now(timezone.utc)
-    join_dl = challenge.get("join_deadline")
-    if isinstance(join_dl, str):
-        try:
-            join_dl = datetime.fromisoformat(join_dl.replace("Z", "+00:00"))
-        except Exception:
-            join_dl = None
-    if isinstance(join_dl, datetime) and join_dl.tzinfo is None:
-        join_dl = join_dl.replace(tzinfo=timezone.utc)
-    is_after_join = (not join_dl) or (now >= join_dl)
-    voting_started = is_after_join and challenge.get("status") != "open"
-    voting_open = voting_started and challenge.get("status") in ("active", "voting")
-    user_tz = request.cookies.get("user_timezone")
-    feed = get_voting_feed(
-        str(challenge_id),
-        str(user["id"]),
-        participants,
-        verification_mode=verification_mode,
-        user_tz=user_tz,
-    )
-    if not feed:
-        feed = get_pending_votes_for_user(
-            str(challenge_id), str(user["id"]), participants, verification_mode=verification_mode, user_tz=user_tz
-        )
-
-    if feed and verification_mode != "vote":
-        feed = [
-            ev for ev in feed
-            if (
-                ev.get("status") == "needs_vote"
-                or (
-                    ev.get("status") in ("approved", "rejected")
-                    and ev.get("status") not in (
-                        "auto_approved", "auto-approved", "auto approved",
-                        "auto_rejected", "auto-rejected", "auto rejected",
-                        "pending"
-                    )
-                    and (ev.get("total_votes", 0) > 0 or ev.get("yes_count", 0) > 0 or ev.get("no_count", 0) > 0)
-                )
-            )
-        ]
-
-    pending_votes = [
-        ev for ev in feed
-        if not ev.get("is_me")
-    ]
-    unvoted_count = (
-        sum(1 for ev in pending_votes if ev.get("my_vote") is None)
-        if voting_open
-        else 0
-    )
-    max_attempts = 1 if verification_mode == "vote" else MAX_ATTEMPTS
-
-    return templates.TemplateResponse(
-        request,
-        "voting.html",
-        {
-            "user": user,
-            "challenge": challenge,
-            "feed": feed,
-            "pending_votes": pending_votes,
-            "unvoted_count": unvoted_count,
-            "voting_open": voting_open,
-            "voting_started": voting_started,
-            "vote_success": vote == "success",
-            "vote_error": vote_error,
-            "max_attempts": max_attempts,
-        },
-    )
-
-
-@router.post("/evidence/{evidence_id}/vote")
-async def vote_on_evidence(
-    evidence_id: UUID,
-    request: Request,
-    approve: bool | None = Form(None),
-    return_to: str | None = Form(None),
-    user: dict = Depends(current_user),
-):
-    if approve is None:
-        content_type = request.headers.get("content-type", "")
-        if "application/json" in content_type:
-            try:
-                body = await request.json()
-                approve = bool(body.get("approve"))
-                return_to = body.get("return_to")
-            except Exception:
-                raise HTTPException(status_code=422, detail="Invalid JSON body")
-        else:
-            form = await request.form()
-            raw_val = form.get("approve")
-            return_to = form.get("return_to") or return_to
-            if raw_val is None:
-                raise HTTPException(status_code=422, detail="approve field is required")
-            if isinstance(raw_val, str):
-                approve = raw_val.lower() in ("true", "1", "yes")
-            else:
-                approve = bool(raw_val)
-
-    from urllib.parse import quote_plus
-
-    def _split_anchor(url: str) -> tuple[str, str]:
-        """Split a URL into (path, '#anchor') parts, stripping any query string."""
-        no_query = url.split("?")[0]
-        if "#" in no_query:
-            path, anchor = no_query.split("#", 1)
-            return path, f"#{anchor}"
-        return no_query, ""
-
-    try:
-        result = cast_vote(str(evidence_id), str(user["id"]), approve)
-    except HTTPException as e:
-        accept = request.headers.get("accept", "")
-        content_type = request.headers.get("content-type", "")
-        if "application/json" in accept or "application/json" in content_type:
-            raise
-        if return_to and str(return_to).startswith("/challenges/"):
-            base_path, anchor = _split_anchor(str(return_to))
-            return RedirectResponse(
-                url=f"{base_path}?vote_error={quote_plus(str(e.detail))}{anchor}",
-                status_code=303,
-            )
-        raise
-    except ValueError as e:
-        accept = request.headers.get("accept", "")
-        content_type = request.headers.get("content-type", "")
-        if "application/json" in accept or "application/json" in content_type:
-            raise HTTPException(status_code=400, detail=str(e))
-        if return_to and str(return_to).startswith("/challenges/"):
-            base_path, anchor = _split_anchor(str(return_to))
-            return RedirectResponse(
-                url=f"{base_path}?vote_error={quote_plus(str(e))}{anchor}",
-                status_code=303,
-            )
-        raise HTTPException(status_code=400, detail=str(e))
-
-    challenge_id = result["challenge_id"]
-
-    accept = request.headers.get("accept", "")
-    content_type = request.headers.get("content-type", "")
-    if "application/json" in accept or "application/json" in content_type:
-        return result
-
-    if return_to and str(return_to).startswith("/challenges/"):
-        base_path, anchor = _split_anchor(str(return_to))
-        return RedirectResponse(
-            url=f"{base_path}?vote=success{anchor}",
-            status_code=303,
-        )
-
-    return RedirectResponse(
-        url=f"/challenges/{challenge_id}?vote=success",
-        status_code=303,
-    )
