@@ -44,12 +44,7 @@
 
 ## Demo Video
 
-<!-- TODO: Replace the link below with your published YouTube / Vimeo hackathon submission video URL -->
-
-> **Hackathon Submission Video:** **[Watch the Demo Video](#)** *(paste video link here)*
-
-<!-- Optional: If hosting a live public demo, uncomment and update the line below -->
-<!-- **Live App:** https://your-app.onrender.com -->
+> **Hackathon Submission Video:** **[Watch the Demo Video](https://youtu.be/yVh7GClYxMI)**
 
 ---
 
