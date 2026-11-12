@@ -48,6 +48,16 @@
 
 ---
 
+## URl to demo version
+
+You can test our app on [Test our app](https://keepit-xuif.onrender.com/)
+
+For testing you need to use Sandbox Paypal accounts - if you wish to test, reach out and we will create you as many accounts as you need for your test.
+If you wish to learn how our app works, but you do not have time for testing we recommend you to check out this report:
+### [How it works - report with screens](docs/how_the_app_works.md)
+
+---
+
 ## How It Works
 
 1. **Make a pact** — Sign in with **Log in with PayPal**, create a challenge with completion criteria, an Entry Fee (in PLN), join and proof deadlines, and either **AI Arbiter** or **Group Vote** verification mode. Invite friends via link and lock in spots by paying the Entry Fee through PayPal Checkout.
