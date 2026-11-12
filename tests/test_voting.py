@@ -281,9 +281,9 @@ def test_voting_quorum_requires_50_percent():
         mock_set_status.assert_not_called()
 
 
-def test_voting_approved_when_tak_strictly_greater_than_nie():
+def test_voting_approved_when_yes_strictly_greater_than_no():
     """
-    Requirement: glosy na tak > glosy na nie -> approved.
+    Requirement: yes votes > no votes -> approved.
     3 participants: 2 votes cast (MOCK_USER=True, THIRD_USER=True).
     2 > 0 -> approved, mark_verified called.
     """
@@ -331,7 +331,7 @@ def test_voting_approved_when_tak_strictly_greater_than_nie():
 
 def test_voting_rejected_on_tie():
     """
-    Requirement: glosy na tak = glosy na nie -> nie zaliczony (rejected).
+    Requirement: yes votes = no votes -> rejected.
     3 participants: 2 votes cast (1 Yes, 1 No).
     1 == 1 -> rejected.
     """
