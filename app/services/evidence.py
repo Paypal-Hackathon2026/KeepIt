@@ -506,8 +506,8 @@ def cast_vote(evidence_id: str, voter_id: str, approve: bool) -> dict:
     if is_valid and n_eligible > 0:
         if total_votes >= n_eligible:
             # All eligible participants have voted:
-            # glosy na tak > glosy na nie -> approved
-            # glosy na tak = glosy na nie -> rejected
+            # yes votes > no votes -> approved
+            # yes votes = no votes -> rejected
             new_status = "approved" if yes_votes > no_votes else "rejected"
         elif yes_votes > (n_eligible / 2):
             new_status = "approved"

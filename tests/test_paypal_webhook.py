@@ -103,11 +103,51 @@ class FakeWebhookEventsTable:
         return SimpleNamespace(data=self.saved)
 
 
+class FakeGenericTable:
+    def __init__(self, data=None):
+        self.rows = data if data is not None else []
+        self._filters = []
+        self._pending_update = None
+
+    def select(self, *args, **kwargs):
+        return self
+
+    def eq(self, field, val):
+        self._filters.append((field, val))
+        return self
+
+    def update(self, payload):
+        self._pending_update = payload
+        return self
+
+    def _matches(self, row):
+        for field, val in self._filters:
+            if row.get(field) != val:
+                return False
+        return True
+
+    def execute(self):
+        matched = [r for r in self.rows if self._matches(r)]
+        if self._pending_update is not None:
+            updated = []
+            for r in matched:
+                r.update(self._pending_update)
+                updated.append(r)
+            self._pending_update = None
+            self._filters = []
+            return SimpleNamespace(data=updated)
+
+        self._filters = []
+        return SimpleNamespace(data=matched)
+
+
 class FakeSupabase:
-    def __init__(self, payment=None):
+    def __init__(self, payment=None, challenges=None, payouts=None):
         self.payments = FakePaymentsTable(payment)
         self.participants = FakeParticipantsTable()
         self.webhook_events = FakeWebhookEventsTable()
+        self.challenges = FakeGenericTable(challenges)
+        self.payouts = FakeGenericTable(payouts)
 
     def table(self, name):
         if name == "payments":
@@ -116,6 +156,10 @@ class FakeSupabase:
             return self.participants
         if name == "webhook_events":
             return self.webhook_events
+        if name == "challenges":
+            return self.challenges
+        if name == "payouts":
+            return self.payouts
         raise AssertionError(f"Unexpected table: {name}")
 
 
@@ -374,3 +418,186 @@ def test_webhook_route_unhandled_event_type_ignored(monkeypatch):
     assert resp.status_code == 200
     assert resp.json() == {"status": "ignored"}
     assert len(fake_supabase.webhook_events.saved) == 1
+
+
+def test_handle_payout_item_succeeded_partial_leaves_challenge_settling(monkeypatch):
+    payout_1 = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    payout_2 = {"id": "p-2", "challenge_id": "ch-1", "status": "pending"}
+    challenge = {"id": "ch-1", "status": "settling"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout_1, payout_2])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+
+    resource = {
+        "payout_item_id": "item-1",
+        "payout_item": {"sender_item_id": "p-1"},
+    }
+    paypal_routes.handle_payout_item_succeeded(resource)
+
+    assert payout_1["status"] == "success"
+    assert payout_1["paypal_item_id"] == "item-1"
+    assert payout_2["status"] == "pending"
+    assert challenge["status"] == "settling"
+
+
+def test_handle_payout_item_succeeded_marks_challenge_settled_when_all_done(monkeypatch):
+    payout_1 = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    challenge = {"id": "ch-1", "status": "settling"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout_1])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+
+    resource = {
+        "payout_item_id": "item-1",
+        "payout_item": {"sender_item_id": "p-1"},
+    }
+    paypal_routes.handle_payout_item_succeeded(resource)
+
+    assert payout_1["status"] == "success"
+    assert payout_1["paypal_item_id"] == "item-1"
+    assert challenge["status"] == "settled"
+
+
+def test_handle_payout_item_failed_reopens_challenge(monkeypatch):
+    payout_1 = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    challenge = {"id": "ch-1", "status": "settling"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout_1])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+
+    resource = {
+        "payout_item_id": "item-1",
+        "payout_item": {"sender_item_id": "p-1"},
+    }
+    paypal_routes.handle_payout_item_failed(resource)
+
+    assert payout_1["status"] == "failed"
+    assert payout_1["paypal_item_id"] == "item-1"
+    assert challenge["status"] == "closed"
+
+
+def test_handle_payout_batch_success(monkeypatch):
+    challenge = {"id": "ch-1", "status": "settling", "paypal_batch_id": "batch-100"}
+    payout_1 = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout_1])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+
+    resource = {
+        "batch_header": {"payout_batch_id": "batch-100"},
+    }
+    paypal_routes.handle_payout_batch_success(resource)
+
+    assert challenge["status"] == "settled"
+    assert payout_1["status"] == "success"
+
+
+def test_handle_payout_batch_denied(monkeypatch):
+    challenge = {"id": "ch-1", "status": "settling", "paypal_batch_id": "batch-200"}
+    payout_pending = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    payout_done = {"id": "p-2", "challenge_id": "ch-1", "status": "success"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout_pending, payout_done])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+
+    resource = {
+        "batch_header": {"payout_batch_id": "batch-200"},
+    }
+    paypal_routes.handle_payout_batch_denied(resource)
+
+    assert challenge["status"] == "closed"
+    assert payout_pending["status"] == "failed"
+    assert payout_done["status"] == "success"
+
+
+def test_webhook_route_payout_item_succeeded(monkeypatch):
+    client = TestClient(app)
+    challenge = {"id": "ch-1", "status": "settling"}
+    payout = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+    monkeypatch.setattr(paypal_routes, "verify_webhook_signature", lambda body, headers: True)
+
+    payload = {
+        "id": "evt-payout-succ-1",
+        "event_type": "PAYMENT.PAYOUTS-ITEM.SUCCEEDED",
+        "resource": {
+            "payout_item_id": "item-123",
+            "payout_item": {"sender_item_id": "p-1"},
+        },
+    }
+    resp = client.post("/paypal/webhook", json=payload)
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "processed"}
+    assert payout["status"] == "success"
+    assert challenge["status"] == "settled"
+
+
+@pytest.mark.parametrize("event_type", [
+    "PAYMENT.PAYOUTS-ITEM.FAILED",
+    "PAYMENT.PAYOUTS-ITEM.BLOCKED",
+    "PAYMENT.PAYOUTS-ITEM.CANCELED",
+])
+def test_webhook_route_payout_item_failed_events(monkeypatch, event_type):
+    client = TestClient(app)
+    challenge = {"id": "ch-1", "status": "settling"}
+    payout = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+    monkeypatch.setattr(paypal_routes, "verify_webhook_signature", lambda body, headers: True)
+
+    payload = {
+        "id": f"evt-fail-{event_type}",
+        "event_type": event_type,
+        "resource": {
+            "payout_item_id": "item-fail-1",
+            "payout_item": {"sender_item_id": "p-1"},
+        },
+    }
+    resp = client.post("/paypal/webhook", json=payload)
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "processed"}
+    assert payout["status"] == "failed"
+    assert challenge["status"] == "closed"
+
+
+def test_webhook_route_payout_batch_success(monkeypatch):
+    client = TestClient(app)
+    challenge = {"id": "ch-1", "status": "settling", "paypal_batch_id": "batch-ok-1"}
+    payout = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+    monkeypatch.setattr(paypal_routes, "verify_webhook_signature", lambda body, headers: True)
+
+    payload = {
+        "id": "evt-batch-succ-1",
+        "event_type": "PAYMENT.PAYOUTSBATCH.SUCCESS",
+        "resource": {
+            "batch_header": {"payout_batch_id": "batch-ok-1"},
+        },
+    }
+    resp = client.post("/paypal/webhook", json=payload)
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "processed"}
+    assert challenge["status"] == "settled"
+    assert payout["status"] == "success"
+
+
+def test_webhook_route_payout_batch_denied(monkeypatch):
+    client = TestClient(app)
+    challenge = {"id": "ch-1", "status": "settling", "paypal_batch_id": "batch-denied-1"}
+    payout = {"id": "p-1", "challenge_id": "ch-1", "status": "pending"}
+    fake_supabase = FakeSupabase(challenges=[challenge], payouts=[payout])
+    monkeypatch.setattr(paypal_routes, "supabase", fake_supabase)
+    monkeypatch.setattr(paypal_routes, "verify_webhook_signature", lambda body, headers: True)
+
+    payload = {
+        "id": "evt-batch-denied-1",
+        "event_type": "PAYMENT.PAYOUTSBATCH.DENIED",
+        "resource": {
+            "batch_header": {"payout_batch_id": "batch-denied-1"},
+        },
+    }
+    resp = client.post("/paypal/webhook", json=payload)
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "processed"}
+    assert challenge["status"] == "closed"
+    assert payout["status"] == "failed"
+
+
+
