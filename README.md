@@ -151,15 +151,13 @@ cp .env.example .env
 
 ### 4. Set up Supabase
 
-1. Open your Supabase project's **SQL Editor** and run [`supabase/schema.sql`](supabase/schema.sql).
-2. Run [`supabase/create_challenge_with_participant.sql`](supabase/create_challenge_with_participant.sql) to create the `create_challenge_with_participant` RPC function.
-   *(If updating an older schema, apply the scripts in [`supabase/migrations/`](supabase/migrations/).)*
-3. In Supabase **Storage**, create a bucket named `evidence` for uploaded proof images.
+1. Open your Supabase project's **SQL Editor** and run [`supabase/schema.sql`](supabase/schema.sql). It creates the database schema and the `create_challenge_with_participant` RPC used by the app.
+2. In Supabase **Storage**, create a bucket named `evidence` for uploaded proof images.
 
 <details>
 <summary>View Database ERD</summary>
 <p align="center">
-  <img src="supabase/ERD.png" alt="KeepIt Database ERD" />
+  <img src="supabase/ERD.jpg" alt="KeepIt Database ERD" />
 </p>
 </details>
 
@@ -215,10 +213,8 @@ KeepIt/
 │   ├── templates/           # Jinja2 pages & HTMX partials
 │   └── static/              # CSS & SVG/PNG assets
 ├── supabase/
-│   ├── schema.sql           # Core PostgreSQL schema
-│   ├── create_challenge_with_participant.sql
-│   ├── migrations/          # Incremental SQL migrations
-│   └── ERD.png              # Entity-Relationship Diagram
+│   ├── schema.sql           # Core PostgreSQL schema + RPCs
+│   └── ERD.jpg              # Database ERD
 ├── docs/postman/            # Postman collections & PayPal sandbox test guides
 ├── tests/                   # Pytest unit and integration tests
 ├── requirements.txt         # Runtime dependencies
